@@ -5,9 +5,9 @@ import {useEffect} from "react";
 import {ScreenContainer} from "@/components/screen-container";
 import {ArrowRight, ChevronsDown, Compass} from "lucide-react-native";
 import {Colors, Layout, Radii, Shadows, Spacing, Typography} from "@/constants/theme";
-import {TopographicBackground} from "@/components/TopgraphicBackground";
+import {TopographicBackground} from "@/components/topographic-background";
 import Animated, {Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming} from "react-native-reanimated";
-import {MUSEUM_SECTIONS, SectionOverview} from "@/data/SectionOverview";
+import {SECOES, SectionData} from "@/data/museum-section";
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -90,12 +90,12 @@ export default function HomeScreen() {
                             </View>
 
                             <View style={styles.sectionList}>
-                                {MUSEUM_SECTIONS.map((section) => (
+                                {Object.values(SECOES).map((section) => (
                                     <SectionRowItem
-                                        key={section.id}
+                                        key={section.sectionId}
                                         section={section}
                                         isDesktop
-                                        onPress={() => handleAbrirSessao(section.id)}
+                                        onPress={() => handleAbrirSessao(section.sectionId)}
                                     />
                                 ))}
                             </View>
@@ -151,11 +151,11 @@ export default function HomeScreen() {
                         </View>
 
                         <View style={styles.sectionList}>
-                            {MUSEUM_SECTIONS.map((section) => (
+                            {Object.values(SECOES).map((section) => (
                                 <SectionRowItem
-                                    key={section.id}
+                                    key={section.sectionId}
                                     section={section}
-                                    onPress={() => handleAbrirSessao(section.id)}
+                                    onPress={() => handleAbrirSessao(section.sectionId)}
                                 />
                             ))}
                         </View>
@@ -197,11 +197,11 @@ function SectionRowItem({
                             isDesktop = false,
                             onPress,
                         }: {
-    section: SectionOverview;
+    section: SectionData;
     isDesktop?: boolean;
     onPress: () => void;
 }) {
-    const formattedNumber = section.id.padStart(2, '0');
+    const formattedNumber = section.sectionId.padStart(2, '0');
 
     return (
         <Pressable
