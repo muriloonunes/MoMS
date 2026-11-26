@@ -138,7 +138,7 @@ export function RichGlossaryText({
             entry?: GlossaryEntry;
         }> = [];
 
-        const pattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+        const pattern = /\[\[([^\]|]+)(?:\|([^\]]+))?]]/g;
         let lastIndex = 0;
         let match: RegExpExecArray | null;
 

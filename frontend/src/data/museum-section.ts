@@ -22,6 +22,7 @@ export type StepLayout = 'full-image' | 'split' | 'text-only'
 export interface StoryStep {
     id: string;
     layout: StepLayout,
+    sequenceId?: string;        // Agrupa passos consecutivos na mesma sequência visual (mesmo trocando de imagem)
     year?: string;              // Ex: "1918" ou "1943 • Bletchley Park"
     title?: string;             // Título do trecho
     text: string;
@@ -63,6 +64,7 @@ export const SECOES: Record<string, SectionData> = {
             {
                 id: '2',
                 layout: 'split',
+                sequenceId: 'vigenere-tutorial',
                 year: 'SÉCULO XVI',
                 title: 'Cifra de Vigenère',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
@@ -72,17 +74,66 @@ export const SECOES: Record<string, SectionData> = {
             },
             {
                 id: '2.1',
-                layout: "full-image",
+                layout: "split",
+                sequenceId: 'vigenere-tutorial',
+                title: 'Como Cifrar: Passo 1',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
-                camera: {scale: 1.2, focusX: 0.1, focusY: 0.1},
-                text: 'Por mais de três séculos, essa cifra era conhecida como "le chiffre indéchiffrable" (a cifra indecifrável), pois enganava a [[analise-frequencia|análise da frequência]]. Uma mesma letra pode virar letras diferentes no texto final, o que embaralha os padrões e faz o resultado parecer aleatório.',
+                camera: {scale: 1.0, focusX: 0, focusY: 0},
+                text: 'Exemplo: queremos criptografar a frase "ir para sul" usando a palavra-chave "meia".',
                 isBrazil: false,
             },
             {
                 id: '2.2',
+                layout: "split",
+                sequenceId: 'vigenere-tutorial',
+                title: 'Como Cifrar: Passo 2',
+                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
+                camera: {scale: 1.15, focusX: -0.25, focusY: -0.25},
+                text: 'Primeiro, repetimos as letras da senha até cobrir todas as 9 letras da mensagem:\n\nMensagem: I R  P A R A  S U L\nSenha:    M E  I A M E  I A M',
+                isBrazil: false,
+            },
+            {
+                id: '2.3',
+                layout: "split",
+                sequenceId: 'vigenere-tutorial',
+                title: 'Como Cifrar: Passo 3',
+                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
+                camera: {scale: 1.75, focusX: -0.18, focusY: -0.05},
+                text: 'Para a 1ª letra ("I") com a 1ª letra da senha ("M"), cruzamos a coluna "I" com a linha "M" na grade (ou somamos suas posições considerando A = 0: 8 + 12 = 20). O encontro das duas resulta na letra "U".',
+                isBrazil: false,
+            },
+            {
+                id: '2.4',
+                layout: "split",
+                sequenceId: 'vigenere-tutorial',
+                title: 'Como Cifrar: Passo 4',
+                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
+                camera: {scale: 1.75, focusX: 0.16, focusY: -0.32},
+                text: 'Na 2ª letra ("R") com a senha ("E"), cruzamos a coluna "R" com a linha "E" (17 + 4 = 21), obtendo a letra "V" — e repetimos o cruzamento para cada par seguinte.',
+                isBrazil: false,
+            },
+            {
+                id: '2.5',
+                layout: "split",
+                sequenceId: 'vigenere-tutorial',
+                title: 'Como Cifrar: Resultado',
+                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
+                camera: {scale: 1.0, focusX: 0, focusY: 0},
+                text: 'Ao final de todas as letras, a mensagem original "ir para sul" se transforma no texto cifrado "uv xade aux".',
+                isBrazil: false,
+            },
+            {
+                id: '2.6',
+                layout: "split",
+                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
+                camera: {scale: 1.0, focusX: 0.1, focusY: 0.1},
+                text: 'Por mais de três séculos, essa cifra era conhecida como "le chiffre indéchiffrable" (a cifra indecifrável), pois enganava a [[analise-frequencia|análise da frequência]]. Uma mesma letra pode virar letras diferentes no texto final, o que embaralha os padrões e faz o resultado parecer aleatório.',
+                isBrazil: false,
+            },
+            {
+                id: '2.7',
                 layout: 'split',
                 imagePosition: 'right',
-                year: 'SÉCULO XIX',
                 image: {uri: 'https://s2.glbimg.com/xLbZ_qMpUDRA35L6cxYbcnjqMOc=/e.glbimg.com/og/ed/f/original/2018/10/18/charles_babbage_1860.jpg'},
                 imageCaption: 'Charles Babbage',
                 imageFit: "contain",

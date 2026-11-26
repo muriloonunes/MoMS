@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420">
+  
+  <rect width="800" height="420" fill="#EBE3D6" />
+
+  
+  <text x="40" y="68" fill="#4A3F38" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="15" font-weight="600">
+    CIFRA DE CÉSAR · DESLOCAMENTO (+3)
+  </text>
+
+  
+  <g>
+    <rect x="45" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="69" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">A</text>
+    <path d="M 69 160 L 69 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="63,230 75,230 69,242" fill="#D97724" />
+    <rect x="45" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="69" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">D</text>
+  </g>
+
+  
+  <g>
+    <rect x="105" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="129" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">B</text>
+    <path d="M 129 160 L 129 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="123,230 135,230 129,242" fill="#D97724" />
+    <rect x="105" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="129" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">E</text>
+  </g>
+
+  
+  <g>
+    <rect x="165" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="189" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">C</text>
+    <path d="M 189 160 L 189 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="183,230 195,230 189,242" fill="#D97724" />
+    <rect x="165" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="189" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">F</text>
+  </g>
+
+  
+  <g>
+    <rect x="225" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="249" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">D</text>
+    <path d="M 249 160 L 249 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="243,230 255,230 249,242" fill="#D97724" />
+    <rect x="225" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="249" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">G</text>
+  </g>
+
+  
+  <g>
+    <rect x="285" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="309" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">E</text>
+    <path d="M 309 160 L 309 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="303,230 315,230 309,242" fill="#D97724" />
+    <rect x="285" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="309" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">H</text>
+  </g>
+
+  
+  <g>
+    <rect x="345" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="369" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">F</text>
+    <path d="M 369 160 L 369 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="363,230 375,230 369,242" fill="#D97724" />
+    <rect x="345" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="369" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">I</text>
+  </g>
+
+  
+  <g>
+    <rect x="405" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="429" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">G</text>
+    <path d="M 429 160 L 429 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="423,230 435,230 429,242" fill="#D97724" />
+    <rect x="405" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="429" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">J</text>
+  </g>
+
+  
+  <g>
+    <rect x="465" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="489" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">H</text>
+    <path d="M 489 160 L 489 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="483,230 495,230 489,242" fill="#D97724" />
+    <rect x="465" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="489" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">K</text>
+  </g>
+
+  
+  <g>
+    <rect x="525" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="549" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">I</text>
+    <path d="M 549 160 L 549 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="543,230 555,230 549,242" fill="#D97724" />
+    <rect x="525" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="549" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">L</text>
+  </g>
+
+  
+  <g>
+    <rect x="585" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="609" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">J</text>
+    <path d="M 609 160 L 609 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="603,230 615,230 609,242" fill="#D97724" />
+    <rect x="585" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="609" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">M</text>
+  </g>
+
+  
+  <g>
+    <rect x="645" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="669" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">K</text>
+    <path d="M 669 160 L 669 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="663,230 675,230 669,242" fill="#D97724" />
+    <rect x="645" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="669" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">N</text>
+  </g>
+
+  
+  <g>
+    <rect x="705" y="105" width="48" height="48" rx="4" fill="#1F1A17" />
+    <text x="729" y="136" text-anchor="middle" fill="#F2ECE4" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="600">L</text>
+    <path d="M 729 160 L 729 236" stroke="#D97724" stroke-width="2.2" />
+    <polygon points="723,230 735,230 729,242" fill="#D97724" />
+    <rect x="705" y="250" width="48" height="48" rx="4" fill="#D97724" />
+    <text x="729" y="281" text-anchor="middle" fill="#14110F" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" font-weight="700">O</text>
+  </g>
+
+  
+  <text x="40" y="346" fill="#4A3F38" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="14">
+    A → D · B → E · C → F · ... · Z → C
+  </text>
+</svg>

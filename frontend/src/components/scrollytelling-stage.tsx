@@ -10,7 +10,8 @@ import Animated, {
     useAnimatedScrollHandler,
     useAnimatedStyle,
     useDerivedValue,
-    useSharedValue, withTiming,
+    useSharedValue,
+    withTiming,
 } from "react-native-reanimated";
 import {ArrowLeft, ArrowRight, ChevronDown, ChevronUp, ImageIcon, Info, MapPin,} from "lucide-react-native";
 import {Colors, Layout, Radii, Shadows, Spacing, Typography} from "@/constants/theme";
@@ -128,10 +129,12 @@ export function ScrollytellingStage({
     const fullImageTracks = useMemo(() => {
         const tracks: Array<{
             id: string;
+            sequenceId?: string;
             image?: ImageSourcePropType | { uri: string };
             title?: string;
             keyframes: Array<{
                 pageIndex: number;
+                image?: ImageSourcePropType | { uri: string };
                 scale: number;
                 focusX: number;
                 focusY: number;
@@ -142,22 +145,25 @@ export function ScrollytellingStage({
             if (step.layout !== "full-image") return;
             const pageIndex = coverPagesCount + index;
             const prevStep = index > 0 ? section.steps[index - 1] : undefined;
-            const sameImageAsPrev =
+            const sameTrackAsPrev =
                 prevStep?.layout === "full-image" &&
-                JSON.stringify(prevStep.image) === JSON.stringify(step.image);
+                ((step.sequenceId && prevStep.sequenceId === step.sequenceId) ||
+                    JSON.stringify(prevStep.image) === JSON.stringify(step.image));
 
             const pose = {
                 pageIndex,
+                image: step.image,
                 scale: step.camera?.scale ?? 1,
                 focusX: step.camera?.focusX ?? 0,
                 focusY: step.camera?.focusY ?? 0,
             };
 
-            if (sameImageAsPrev && tracks.length > 0) {
+            if (sameTrackAsPrev && tracks.length > 0) {
                 tracks[tracks.length - 1].keyframes.push(pose);
             } else {
                 tracks.push({
                     id: step.id,
+                    sequenceId: step.sequenceId,
                     image: step.image,
                     title: step.title,
                     keyframes: [pose],
@@ -166,6 +172,81 @@ export function ScrollytellingStage({
         });
 
         return tracks;
+    }, [section.steps, coverPagesCount]);
+
+    const {splitTracks, splitStepMeta} = useMemo(() => {
+        const tracks: Array<{
+            id: string;
+            sequenceId?: string;
+            imagePosition: "left" | "right";
+            imageFit: "contain" | "cover";
+            imageAspectRatio?: number;
+            keyframes: Array<{
+                pageIndex: number;
+                stepId: string;
+                image?: ImageSourcePropType | { uri: string };
+                imageCaption?: string;
+                title?: string;
+                scale: number;
+                focusX: number;
+                focusY: number;
+            }>;
+        }> = [];
+
+        const metaMap: Record<
+            string,
+            { trackId: string; stepIndexInTrack: number; totalInTrack: number }
+        > = {};
+
+        section.steps.forEach((step, index) => {
+            if (step.layout !== "split") return;
+            const pageIndex = coverPagesCount + index;
+            const prevStep = index > 0 ? section.steps[index - 1] : undefined;
+            const pos = step.imagePosition ?? "right";
+            const prevPos = prevStep?.imagePosition ?? "right";
+
+            const sameTrackAsPrev =
+                prevStep?.layout === "split" &&
+                pos === prevPos &&
+                ((step.sequenceId && prevStep.sequenceId === step.sequenceId) ||
+                    JSON.stringify(prevStep.image) === JSON.stringify(step.image));
+
+            const keyframe = {
+                pageIndex,
+                stepId: step.id,
+                image: step.image,
+                imageCaption: step.imageCaption,
+                title: step.title,
+                scale: step.camera?.scale ?? 1,
+                focusX: step.camera?.focusX ?? 0,
+                focusY: step.camera?.focusY ?? 0,
+            };
+
+            if (sameTrackAsPrev && tracks.length > 0) {
+                tracks[tracks.length - 1].keyframes.push(keyframe);
+            } else {
+                tracks.push({
+                    id: step.id,
+                    sequenceId: step.sequenceId,
+                    imagePosition: pos,
+                    imageFit: step.imageFit ?? "contain",
+                    imageAspectRatio: step.imageAspectRatio,
+                    keyframes: [keyframe],
+                });
+            }
+        });
+
+        tracks.forEach((track) => {
+            track.keyframes.forEach((kf, idx) => {
+                metaMap[kf.stepId] = {
+                    trackId: track.id,
+                    stepIndexInTrack: idx,
+                    totalInTrack: track.keyframes.length,
+                };
+            });
+        });
+
+        return {splitTracks: tracks, splitStepMeta: metaMap};
     }, [section.steps, coverPagesCount]);
 
     const handleOpenGlossary = (entry: GlossaryEntry, anchor?: { x: number; y: number }) => {
@@ -264,6 +345,17 @@ export function ScrollytellingStage({
                             scrollY={scrollY}
                         />
                     ))}
+
+                    {splitTracks.map((track) => (
+                        <SplitTrackLayer
+                            key={`split-track-${track.id}`}
+                            track={track}
+                            pageHeight={stageHeight}
+                            stageWidth={width}
+                            isDesktop={isDesktop}
+                            scrollY={scrollY}
+                        />
+                    ))}
                 </View>
 
                 <Animated.ScrollView
@@ -271,9 +363,6 @@ export function ScrollytellingStage({
                     onScroll={scrollHandler}
                     scrollEventThrottle={16}
                     showsVerticalScrollIndicator={isDesktop}
-                    snapToInterval={!isDesktop ? stageHeight : undefined}
-                    snapToAlignment="start"
-                    decelerationRate={!isDesktop ? "fast" : "normal"}
                 >
                     <View style={{height: stageHeight * coverPagesCount}} pointerEvents="none"/>
 
@@ -283,6 +372,7 @@ export function ScrollytellingStage({
                                 <SplitStorySlide
                                     key={step.id}
                                     step={step}
+                                    sequenceMeta={splitStepMeta[step.id]}
                                     pageHeight={stageHeight}
                                     isDesktop={isDesktop}
                                     onOpenGlossary={handleOpenGlossary}
@@ -528,6 +618,36 @@ function FixedCoverStage({
     );
 }
 
+function TrackKeyframeImage({
+                                image,
+                                index,
+                                activeIndex,
+                                contentFit,
+                                style,
+                            }: {
+    image: ImageSourcePropType | { uri: string };
+    index: number;
+    activeIndex: SharedValue<number>;
+    contentFit: "cover" | "contain";
+    style: any;
+}) {
+    const fadeStyle = useAnimatedStyle(() => {
+        const isCurrent = activeIndex.value === index;
+        return {
+            opacity: withTiming(isCurrent ? 1 : 0, {
+                duration: 380,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+            }),
+        };
+    });
+
+    return (
+        <Animated.View style={[styles.fullBleedLayer, fadeStyle]}>
+            <Image source={image as any} style={style} contentFit={contentFit}/>
+        </Animated.View>
+    );
+}
+
 function FullImageTrackLayer({
                                  track,
                                  pageHeight,
@@ -537,10 +657,12 @@ function FullImageTrackLayer({
                              }: {
     track: {
         id: string;
+        sequenceId?: string;
         image?: ImageSourcePropType | { uri: string };
         title?: string;
         keyframes: Array<{
             pageIndex: number;
+            image?: ImageSourcePropType | { uri: string };
             scale: number;
             focusX: number;
             focusY: number;
@@ -572,6 +694,11 @@ function FullImageTrackLayer({
         () => track.keyframes.map((kf) => kf.focusY),
         [track.keyframes]
     );
+
+    const hasDistinctImages = useMemo(() => {
+        const firstStr = JSON.stringify(track.keyframes[0]?.image);
+        return track.keyframes.some((kf) => JSON.stringify(kf.image) !== firstStr);
+    }, [track.keyframes]);
 
     const containerSlideStyle = useAnimatedStyle(() => {
         const enterFromBottom = firstCenter - scrollY.value;
@@ -624,9 +751,9 @@ function FullImageTrackLayer({
 
         return {
             transform: [
-                { translateX: withTiming(targetTranslateX, timingConfig) },
-                { translateY: withTiming(targetTranslateY, timingConfig) },
-                { scale: withTiming(targetScale, timingConfig) },
+                {translateX: withTiming(targetTranslateX, timingConfig)},
+                {translateY: withTiming(targetTranslateY, timingConfig)},
+                {scale: withTiming(targetScale, timingConfig)},
             ],
         };
     });
@@ -638,11 +765,26 @@ function FullImageTrackLayer({
         <Animated.View style={[styles.fullImageTrackContainer, containerSlideStyle]}>
             <Animated.View style={[styles.fullBleedLayer, animatedImageStyle]}>
                 {validImage ? (
-                    <Image
-                        source={track.image as any}
-                        style={styles.fullBleedImage}
-                        contentFit="cover"
-                    />
+                    hasDistinctImages ? (
+                        track.keyframes.map((kf, idx) =>
+                            hasValidImage(kf.image) ? (
+                                <TrackKeyframeImage
+                                    key={`${track.id}-kf-${idx}`}
+                                    image={kf.image!}
+                                    index={idx}
+                                    activeIndex={activeKeyframeIndex}
+                                    contentFit="cover"
+                                    style={styles.fullBleedImage}
+                                />
+                            ) : null
+                        )
+                    ) : (
+                        <Image
+                            source={track.image as any}
+                            style={styles.fullBleedImage}
+                            contentFit="cover"
+                        />
+                    )
                 ) : (
                     <View style={styles.backdropPlaceholder}>
                         <ImageIcon size={48} color={Colors.borderStrong}/>
@@ -661,26 +803,250 @@ function FullImageTrackLayer({
     );
 }
 
+function SplitTrackLayer({
+                             track,
+                             pageHeight,
+                             stageWidth,
+                             isDesktop,
+                             scrollY,
+                         }: {
+    track: {
+        id: string;
+        sequenceId?: string;
+        imagePosition: "left" | "right";
+        imageFit: "contain" | "cover";
+        imageAspectRatio?: number;
+        keyframes: Array<{
+            pageIndex: number;
+            stepId: string;
+            image?: ImageSourcePropType | { uri: string };
+            imageCaption?: string;
+            title?: string;
+            scale: number;
+            focusX: number;
+            focusY: number;
+        }>;
+    };
+    pageHeight: number;
+    stageWidth: number;
+    isDesktop: boolean;
+    scrollY: SharedValue<number>;
+}) {
+    const firstPage = track.keyframes[0].pageIndex;
+    const lastPage = track.keyframes[track.keyframes.length - 1].pageIndex;
+    const firstCenter = firstPage * pageHeight;
+    const lastCenter = lastPage * pageHeight;
+
+    const frameWidth = isDesktop
+        ? Math.min(stageWidth, Layout.maxContentWidth) * 0.52 - Spacing.lg * 2
+        : stageWidth - Spacing.md * 2;
+    const frameHeight = isDesktop
+        ? Math.min(pageHeight * 0.72, 680)
+        : pageHeight * 0.40;
+
+    const scrollInputRange = useMemo(
+        () => track.keyframes.map((kf) => kf.pageIndex * pageHeight),
+        [track.keyframes, pageHeight]
+    );
+    const scaleOutputRange = useMemo(
+        () => track.keyframes.map((kf) => kf.scale),
+        [track.keyframes]
+    );
+    const focusXOutputRange = useMemo(
+        () => track.keyframes.map((kf) => kf.focusX),
+        [track.keyframes]
+    );
+    const focusYOutputRange = useMemo(
+        () => track.keyframes.map((kf) => kf.focusY),
+        [track.keyframes]
+    );
+
+    const hasDistinctImages = useMemo(() => {
+        const firstStr = JSON.stringify(track.keyframes[0]?.image);
+        return track.keyframes.some((kf) => JSON.stringify(kf.image) !== firstStr);
+    }, [track.keyframes]);
+
+    const containerSlideStyle = useAnimatedStyle(() => {
+        const enterFromBottom = firstCenter - scrollY.value;
+        const exitToTop = lastCenter - scrollY.value;
+
+        let containerY = 0;
+        if (scrollY.value < firstCenter) {
+            containerY = enterFromBottom;
+        } else if (scrollY.value > lastCenter) {
+            containerY = exitToTop;
+        }
+
+        const isVisible =
+            scrollY.value >= firstCenter - pageHeight &&
+            scrollY.value <= lastCenter + pageHeight;
+
+        return {
+            opacity: isVisible ? 1 : 0,
+            transform: [{translateY: containerY}],
+        };
+    });
+
+    const activeKeyframeIndex = useDerivedValue(() => {
+        const triggerAnticipation = pageHeight * 0.4;
+        let current = 0;
+
+        for (let i = 0; i < scrollInputRange.length; i++) {
+            if (scrollY.value >= scrollInputRange[i] - triggerAnticipation) {
+                current = i;
+            }
+        }
+        return current;
+    });
+
+    const animatedImageStyle = useAnimatedStyle(() => {
+        const idx = activeKeyframeIndex.value;
+        const targetScale = scaleOutputRange[idx];
+        const targetFocusX = focusXOutputRange[idx];
+        const targetFocusY = focusYOutputRange[idx];
+
+        const maxOffsetX = frameWidth * (targetScale - 1) * 0.5;
+        const maxOffsetY = frameHeight * (targetScale - 1) * 0.5;
+        const targetTranslateX = -targetFocusX * 2 * maxOffsetX;
+        const targetTranslateY = -targetFocusY * 2 * maxOffsetY;
+
+        const timingConfig = {
+            duration: 650,
+            easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        };
+
+        return {
+            transform: [
+                {translateX: withTiming(targetTranslateX, timingConfig)},
+                {translateY: withTiming(targetTranslateY, timingConfig)},
+                {scale: withTiming(targetScale, timingConfig)},
+            ],
+        };
+    });
+
+    const imageOnLeft = track.imagePosition === "left";
+    const firstKf = track.keyframes[0];
+    const validFirstImage = hasValidImage(firstKf?.image);
+    const caption = track.keyframes.find((kf) => kf.imageCaption)?.imageCaption;
+
+    const imagePane = (
+        <View
+            style={[
+                styles.splitImagePane,
+                isDesktop
+                    ? [styles.splitImagePaneDesktop, {height: pageHeight * 0.72, maxHeight: 680}]
+                    : [styles.splitImagePaneMobile, {height: pageHeight * 0.42}],
+            ]}
+        >
+            <View
+                style={[
+                    styles.splitImageFrame,
+                    track.imageAspectRatio
+                        ? {aspectRatio: track.imageAspectRatio, flex: undefined}
+                        : {flex: 1},
+                ]}
+            >
+                <Animated.View style={[styles.fullBleedLayer, animatedImageStyle]}>
+                    {validFirstImage ? (
+                        hasDistinctImages ? (
+                            track.keyframes.map((kf, idx) =>
+                                hasValidImage(kf.image) ? (
+                                    <TrackKeyframeImage
+                                        key={`${track.id}-split-kf-${idx}`}
+                                        image={kf.image!}
+                                        index={idx}
+                                        activeIndex={activeKeyframeIndex}
+                                        contentFit={track.imageFit}
+                                        style={styles.splitImage}
+                                    />
+                                ) : null
+                            )
+                        ) : (
+                            <Image
+                                source={firstKf.image as any}
+                                style={styles.splitImage}
+                                contentFit={track.imageFit}
+                            />
+                        )
+                    ) : (
+                        <View style={styles.splitImagePlaceholder}>
+                            <ImageIcon size={32} color={Colors.textMuted}/>
+                            <Text style={styles.placeholderCaptionText}>
+                                {caption ?? firstKf?.title ?? "Registro Fotográfico"}
+                            </Text>
+                        </View>
+                    )}
+                </Animated.View>
+            </View>
+            {caption && (
+                <View style={styles.captionRow}>
+                    <Info size={12} color={Colors.textMuted}/>
+                    <Text style={styles.captionText} numberOfLines={1}>
+                        {caption}
+                    </Text>
+                </View>
+            )}
+        </View>
+    );
+
+    return (
+        <Animated.View
+            style={[
+                styles.splitTrackBackdrop,
+                !isDesktop && {paddingVertical: Spacing.md},
+                containerSlideStyle,
+            ]}
+        >
+            {!isDesktop ? (
+                <View style={styles.splitColMobile}>
+                    {imagePane}
+                    <View style={{flex: 1}}/>
+                </View>
+            ) : (
+                <View style={[styles.splitSlideContainer, styles.splitRowDesktop]}>
+                    {imageOnLeft ? (
+                        <>
+                            {imagePane}
+                            <View style={styles.splitTextPaneDesktop}/>
+                        </>
+                    ) : (
+                        <>
+                            <View style={styles.splitTextPaneDesktop}/>
+                            {imagePane}
+                        </>
+                    )}
+                </View>
+            )}
+        </Animated.View>
+    );
+}
+
 function SplitStorySlide({
                              step,
+                             sequenceMeta,
                              pageHeight,
                              isDesktop,
                              onOpenGlossary,
                              onLeaveGlossary,
                          }: {
     step: StoryStep;
+    sequenceMeta?: { trackId: string; stepIndexInTrack: number; totalInTrack: number };
     pageHeight: number;
     isDesktop: boolean;
     onOpenGlossary: (entry: GlossaryEntry, anchor?: { x: number; y: number }) => void;
     onLeaveGlossary: () => void;
 }) {
     const imageOnLeft = step.imagePosition === "left";
-    const validImage = hasValidImage(step.image);
-    const contentFit = step.imageFit ?? "contain";
+    const isSequence = (sequenceMeta?.totalInTrack ?? 1) > 1;
+    const isFirstInTrack = (sequenceMeta?.stepIndexInTrack ?? 0) === 0;
+    const isLastInTrack =
+        sequenceMeta
+            ? sequenceMeta.stepIndexInTrack === sequenceMeta.totalInTrack - 1
+            : true;
 
     const textBody = (
         <View style={styles.splitTextInner}>
-            {(step.year || step.isBrazil) && (
+            {(step.year || step.isBrazil || isSequence) && (
                 <View style={styles.metaBadgeRow}>
                     {step.year && <Text style={styles.stepYearText}>{step.year}</Text>}
                     {step.isBrazil && (
@@ -708,54 +1074,33 @@ function SplitStorySlide({
         </View>
     );
 
-    const imageBlock = (
+    const imageSpacer = (
         <View
+            pointerEvents="none"
             style={[
                 styles.splitImagePane,
                 isDesktop
-                    ? {height: pageHeight * 0.72, maxHeight: 680}
-                    : {height: pageHeight * 0.42},
+                    ? [styles.splitImagePaneDesktop, {height: pageHeight * 0.72, maxHeight: 680}]
+                    : [styles.splitImagePaneMobile, {height: pageHeight * 0.42}],
             ]}
-        >
-            <View
-                style={[
-                    styles.splitImageFrame,
-                    step.imageAspectRatio
-                        ? {aspectRatio: step.imageAspectRatio, flex: undefined}
-                        : {flex: 1},
-                ]}
-            >
-                {validImage ? (
-                    <Image
-                        source={step.image as any}
-                        style={styles.splitImage}
-                        contentFit={contentFit}
-                    />
-                ) : (
-                    <View style={styles.splitImagePlaceholder}>
-                        <ImageIcon size={32} color={Colors.textMuted}/>
-                        <Text style={styles.placeholderCaptionText}>
-                            {step.imageCaption ?? step.title ?? "Registro Fotográfico"}
-                        </Text>
-                    </View>
-                )}
-            </View>
-            {step.imageCaption && (
-                <View style={styles.captionRow}>
-                    <Info size={12} color={Colors.textMuted}/>
-                    <Text style={styles.captionText} numberOfLines={1}>
-                        {step.imageCaption}
-                    </Text>
-                </View>
-            )}
-        </View>
+        />
     );
 
     if (!isDesktop) {
         return (
-            <View style={[styles.splitSlideRoot, {height: pageHeight, paddingVertical: Spacing.md}]}>
+            <View
+                style={[
+                    styles.splitSlideRoot,
+                    {
+                        height: pageHeight,
+                        paddingVertical: Spacing.md,
+                        borderTopWidth: isFirstInTrack ? 1 : 0,
+                        borderBottomWidth: isLastInTrack ? 1 : 0,
+                    },
+                ]}
+            >
                 <View style={styles.splitColMobile}>
-                    {imageBlock}
+                    {imageSpacer}
                     <ScrollView
                         style={styles.mobileSplitTextScroll}
                         contentContainerStyle={{paddingBottom: 44}}
@@ -776,17 +1121,26 @@ function SplitStorySlide({
     );
 
     return (
-        <View style={[styles.splitSlideRoot, {minHeight: pageHeight}]}>
+        <View
+            style={[
+                styles.splitSlideRoot,
+                {
+                    minHeight: pageHeight,
+                    borderTopWidth: isFirstInTrack ? 1 : 0,
+                    borderBottomWidth: isLastInTrack ? 1 : 0,
+                },
+            ]}
+        >
             <View style={[styles.splitSlideContainer, styles.splitRowDesktop]}>
                 {imageOnLeft ? (
                     <>
-                        {imageBlock}
+                        {imageSpacer}
                         {textColumn}
                     </>
                 ) : (
                     <>
                         {textColumn}
-                        {imageBlock}
+                        {imageSpacer}
                     </>
                 )}
             </View>
@@ -1212,17 +1566,33 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         textAlign: "center",
     },
-
-    /* Split Slide */
-    splitSlideRoot: {
-        width: "100%",
+    splitTrackBackdrop: {
+        ...StyleSheet.absoluteFill,
         backgroundColor: Colors.bgPrimary,
         justifyContent: "center",
         alignItems: "center",
         paddingVertical: 48,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
+        overflow: "hidden",
+    },
+    splitSlideRoot: {
+        width: "100%",
+        backgroundColor: "transparent",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingVertical: 48,
         borderColor: Colors.borderSubtle,
+    },
+    sequenceStepBadge: {
+        backgroundColor: Colors.bgElevated,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: Radii.sm,
+        borderWidth: 1,
+        borderColor: Colors.borderStrong,
+    },
+    sequenceStepBadgeText: {
+        ...Typography.badge,
+        color: Colors.accentPrimary,
     },
     splitSlideContainer: {
         width: "100%",
@@ -1234,6 +1604,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     splitColMobile: {
+        width: "100%",
         flex: 1,
         flexDirection: "column",
         paddingHorizontal: Spacing.md,
@@ -1256,9 +1627,14 @@ const styles = StyleSheet.create({
         width: "100%",
     },
     splitImagePane: {
-        flex: 0.52,
         justifyContent: "center",
+    },
+    splitImagePaneDesktop: {
+        flex: 0.52,
         paddingHorizontal: Spacing.lg,
+    },
+    splitImagePaneMobile: {
+        width: "100%",
     },
     splitImageFrame: {
         width: "100%",
@@ -1317,7 +1693,6 @@ const styles = StyleSheet.create({
         maxWidth: 620,
         width: "100%",
     },
-
     fullImageSlideRoot: {
         width: "100%",
         justifyContent: "space-between",
