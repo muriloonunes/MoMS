@@ -20,6 +20,7 @@ import {SectionData, StoryStep} from "@/data/museum-section";
 import {GlossaryEntry} from "@/data/glossary";
 import {ActiveGlossaryState, GlossaryOverlay, RichGlossaryText} from "@/components/glossary-overlay";
 import {scheduleOnRN} from "react-native-worklets";
+import Svg, {Defs, LinearGradient, Rect, Stop} from "react-native-svg";
 
 function hasValidImage(image?: ImageSourcePropType | { uri: string }): boolean {
     if (!image) return false;
@@ -342,20 +343,22 @@ export function ScrollytellingStage({
                             pageHeight={stageHeight}
                             stageWidth={width}
                             stageHeight={stageHeight}
-                            scrollY={scrollY}
-                        />
-                    ))}
-
-                    {splitTracks.map((track) => (
-                        <SplitTrackLayer
-                            key={`split-track-${track.id}`}
-                            track={track}
-                            pageHeight={stageHeight}
-                            stageWidth={width}
                             isDesktop={isDesktop}
                             scrollY={scrollY}
                         />
                     ))}
+
+                    {isDesktop &&
+                        splitTracks.map((track) => (
+                            <SplitTrackLayer
+                                key={`split-track-${track.id}`}
+                                track={track}
+                                pageHeight={stageHeight}
+                                stageWidth={width}
+                                isDesktop={isDesktop}
+                                scrollY={scrollY}
+                            />
+                        ))}
                 </View>
 
                 <Animated.ScrollView
@@ -415,6 +418,21 @@ export function ScrollytellingStage({
                         onSelectSection={onSelectSection}
                     />
                 </Animated.ScrollView>
+
+                {!isDesktop && (
+                    <View style={styles.fullBleedLayer} pointerEvents="none">
+                        {splitTracks.map((track) => (
+                            <SplitTrackLayer
+                                key={`split-track-mobile-${track.id}`}
+                                track={track}
+                                pageHeight={stageHeight}
+                                stageWidth={width}
+                                isDesktop={isDesktop}
+                                scrollY={scrollY}
+                            />
+                        ))}
+                    </View>
+                )}
 
                 {currentPageIndex > 0 && (
                     <View style={styles.floatingTopChevronWrapper} pointerEvents="box-none">
@@ -624,12 +642,14 @@ function TrackKeyframeImage({
                                 activeIndex,
                                 contentFit,
                                 style,
+                                onLoad,
                             }: {
     image: ImageSourcePropType | { uri: string };
     index: number;
     activeIndex: SharedValue<number>;
     contentFit: "cover" | "contain";
     style: any;
+    onLoad?: (event: any) => void;
 }) {
     const fadeStyle = useAnimatedStyle(() => {
         const isCurrent = activeIndex.value === index;
@@ -643,7 +663,7 @@ function TrackKeyframeImage({
 
     return (
         <Animated.View style={[styles.fullBleedLayer, fadeStyle]}>
-            <Image source={image as any} style={style} contentFit={contentFit}/>
+            <Image source={image as any} style={style} contentFit={contentFit} onLoad={onLoad}/>
         </Animated.View>
     );
 }
@@ -653,6 +673,7 @@ function FullImageTrackLayer({
                                  pageHeight,
                                  stageWidth,
                                  stageHeight,
+                                 isDesktop,
                                  scrollY,
                              }: {
     track: {
@@ -671,6 +692,7 @@ function FullImageTrackLayer({
     pageHeight: number;
     stageWidth: number;
     stageHeight: number;
+    isDesktop: boolean;
     scrollY: SharedValue<number>;
 }) {
     const firstPage = track.keyframes[0].pageIndex;
@@ -735,14 +757,18 @@ function FullImageTrackLayer({
 
     const animatedImageStyle = useAnimatedStyle(() => {
         const idx = activeKeyframeIndex.value;
-        const targetScale = scaleOutputRange[idx];
+        const rawScale = scaleOutputRange[idx];
         const targetFocusX = focusXOutputRange[idx];
         const targetFocusY = focusYOutputRange[idx];
+        const mobileZoomBoost = !isDesktop && rawScale > 1.05 ? rawScale * 1.85 : rawScale;
+        const targetScale = isDesktop ? rawScale : mobileZoomBoost;
 
+        const effectiveRefHeight = isDesktop ? stageHeight : stageWidth * 0.65;
         const maxOffsetX = stageWidth * (targetScale - 1) * 0.5;
-        const maxOffsetY = stageHeight * (targetScale - 1) * 0.5;
+        const maxOffsetY = effectiveRefHeight * (targetScale - 1) * 0.5;
         const targetTranslateX = -targetFocusX * 2 * maxOffsetX;
-        const targetTranslateY = -targetFocusY * 2 * maxOffsetY;
+        const mobileRestYOffset = !isDesktop && rawScale <= 1.05 ? -stageHeight * 0.06 : 0;
+        const targetTranslateY = -targetFocusY * 2 * maxOffsetY + mobileRestYOffset;
 
         const timingConfig = {
             duration: 750,
@@ -760,9 +786,22 @@ function FullImageTrackLayer({
 
     const validImage = hasValidImage(track.image);
     const firstKeyframe = track.keyframes[0];
+    const imageContentFit = isDesktop ? "cover" : "contain";
 
     return (
         <Animated.View style={[styles.fullImageTrackContainer, containerSlideStyle]}>
+            {!isDesktop && validImage && (
+                <View style={styles.mobileAmbientBackdrop} pointerEvents="none">
+                    <Image
+                        source={track.image as any}
+                        style={styles.fullBleedImage}
+                        contentFit="cover"
+                        blurRadius={45}
+                    />
+                    <View style={styles.mobileAmbientDimmer}/>
+                </View>
+            )}
+
             <Animated.View style={[styles.fullBleedLayer, animatedImageStyle]}>
                 {validImage ? (
                     hasDistinctImages ? (
@@ -773,7 +812,7 @@ function FullImageTrackLayer({
                                     image={kf.image!}
                                     index={idx}
                                     activeIndex={activeKeyframeIndex}
-                                    contentFit="cover"
+                                    contentFit={imageContentFit}
                                     style={styles.fullBleedImage}
                                 />
                             ) : null
@@ -782,7 +821,7 @@ function FullImageTrackLayer({
                         <Image
                             source={track.image as any}
                             style={styles.fullBleedImage}
-                            contentFit="cover"
+                            contentFit={imageContentFit}
                         />
                     )
                 ) : (
@@ -797,8 +836,20 @@ function FullImageTrackLayer({
                         </Text>
                     </View>
                 )}
-                <View style={styles.fullImageVignette}/>
             </Animated.View>
+
+            <View style={styles.storyGradientScrim} pointerEvents="none">
+                <Svg width="100%" height="100%" preserveAspectRatio="none">
+                    <Defs>
+                        <LinearGradient id={`scrim-${track.id}`} x1="0" y1="0" x2="0" y2="1">
+                            <Stop offset="0" stopColor="#0E0C0A" stopOpacity="0"/>
+                            <Stop offset="0.45" stopColor="#0E0C0A" stopOpacity="0.65"/>
+                            <Stop offset="1" stopColor="#0E0C0A" stopOpacity="0.94"/>
+                        </LinearGradient>
+                    </Defs>
+                    <Rect x="0" y="0" width="100%" height="100%" fill={`url(#scrim-${track.id})`}/>
+                </Svg>
+            </View>
         </Animated.View>
     );
 }
@@ -837,12 +888,42 @@ function SplitTrackLayer({
     const firstCenter = firstPage * pageHeight;
     const lastCenter = lastPage * pageHeight;
 
-    const frameWidth = isDesktop
+    const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | undefined>(
+        track.imageAspectRatio
+    );
+
+    const maxPaneWidth = isDesktop
         ? Math.min(stageWidth, Layout.maxContentWidth) * 0.52 - Spacing.lg * 2
         : stageWidth - Spacing.md * 2;
-    const frameHeight = isDesktop
+    const maxPaneHeight = isDesktop
         ? Math.min(pageHeight * 0.72, 680)
         : pageHeight * 0.40;
+
+    const effectiveRatio = track.imageAspectRatio ?? naturalAspectRatio;
+
+    const {frameWidth, frameHeight} = useMemo(() => {
+        if (track.imageFit === "cover" && !track.imageAspectRatio) {
+            return {frameWidth: maxPaneWidth, frameHeight: maxPaneHeight};
+        }
+        if (!effectiveRatio || effectiveRatio <= 0) {
+            return {frameWidth: maxPaneWidth, frameHeight: maxPaneHeight};
+        }
+        let w = maxPaneWidth;
+        let h = w / effectiveRatio;
+        if (h > maxPaneHeight) {
+            h = maxPaneHeight;
+            w = h * effectiveRatio;
+        }
+        return {frameWidth: w, frameHeight: h};
+    }, [track.imageFit, track.imageAspectRatio, effectiveRatio, maxPaneWidth, maxPaneHeight]);
+
+    const handleImageLoad = useCallback((event: any) => {
+        const w = event?.source?.width;
+        const h = event?.source?.height;
+        if (w && h && h > 0) {
+            setNaturalAspectRatio(w / h);
+        }
+    }, []);
 
     const scrollInputRange = useMemo(
         () => track.keyframes.map((kf) => kf.pageIndex * pageHeight),
@@ -938,69 +1019,82 @@ function SplitTrackLayer({
                     : [styles.splitImagePaneMobile, {height: pageHeight * 0.42}],
             ]}
         >
-            <View
-                style={[
-                    styles.splitImageFrame,
-                    track.imageAspectRatio
-                        ? {aspectRatio: track.imageAspectRatio, flex: undefined}
-                        : {flex: 1},
-                ]}
-            >
-                <Animated.View style={[styles.fullBleedLayer, animatedImageStyle]}>
-                    {validFirstImage ? (
-                        hasDistinctImages ? (
-                            track.keyframes.map((kf, idx) =>
-                                hasValidImage(kf.image) ? (
-                                    <TrackKeyframeImage
-                                        key={`${track.id}-split-kf-${idx}`}
-                                        image={kf.image!}
-                                        index={idx}
-                                        activeIndex={activeKeyframeIndex}
-                                        contentFit={track.imageFit}
-                                        style={styles.splitImage}
-                                    />
-                                ) : null
+            <View style={{width: frameWidth, alignSelf: "center"}}>
+                <View
+                    style={[
+                        styles.splitImageFrame,
+                        {width: frameWidth, height: frameHeight},
+                    ]}
+                >
+                    <Animated.View style={[styles.fullBleedLayer, animatedImageStyle]}>
+                        {validFirstImage ? (
+                            hasDistinctImages ? (
+                                track.keyframes.map((kf, idx) =>
+                                    hasValidImage(kf.image) ? (
+                                        <TrackKeyframeImage
+                                            key={`${track.id}-split-kf-${idx}`}
+                                            image={kf.image!}
+                                            index={idx}
+                                            activeIndex={activeKeyframeIndex}
+                                            contentFit={track.imageFit}
+                                            style={styles.splitImage}
+                                            onLoad={idx === 0 ? handleImageLoad : undefined}
+                                        />
+                                    ) : null
+                                )
+                            ) : (
+                                <Image
+                                    source={firstKf.image as any}
+                                    style={styles.splitImage}
+                                    contentFit={track.imageFit}
+                                    onLoad={handleImageLoad}
+                                />
                             )
                         ) : (
-                            <Image
-                                source={firstKf.image as any}
-                                style={styles.splitImage}
-                                contentFit={track.imageFit}
-                            />
-                        )
-                    ) : (
-                        <View style={styles.splitImagePlaceholder}>
-                            <ImageIcon size={32} color={Colors.textMuted}/>
-                            <Text style={styles.placeholderCaptionText}>
-                                {caption ?? firstKf?.title ?? "Registro Fotográfico"}
-                            </Text>
-                        </View>
-                    )}
-                </Animated.View>
-            </View>
-            {caption && (
-                <View style={styles.captionRow}>
-                    <Info size={12} color={Colors.textMuted}/>
-                    <Text style={styles.captionText} numberOfLines={1}>
-                        {caption}
-                    </Text>
+                            <View style={styles.splitImagePlaceholder}>
+                                <ImageIcon size={32} color={Colors.textMuted}/>
+                                <Text style={styles.placeholderCaptionText}>
+                                    {caption ?? firstKf?.title ?? "Registro Fotográfico"}
+                                </Text>
+                            </View>
+                        )}
+                    </Animated.View>
                 </View>
-            )}
+                {caption && (
+                    <View style={styles.captionRow}>
+                        <Info size={12} color={Colors.textMuted}/>
+                        <Text style={styles.captionText} numberOfLines={1}>
+                            {caption}
+                        </Text>
+                    </View>
+                )}
+            </View>
         </View>
     );
 
     return (
         <Animated.View
             style={[
-                styles.splitTrackBackdrop,
-                !isDesktop && {paddingVertical: Spacing.md},
+                isDesktop ? styles.splitTrackBackdrop : styles.splitTrackBackdropMobile,
                 containerSlideStyle,
             ]}
         >
             {!isDesktop ? (
-                <View style={styles.splitColMobile}>
-                    {imagePane}
-                    <View style={{flex: 1}}/>
+                <View style={styles.splitColMobileOverlay}>
+                    <View style={styles.splitMobileTopShield}>
+                        {imagePane}
+                    </View>
+                    <View style={styles.splitMobileBottomFade} pointerEvents="none">
+                        <Svg width="100%" height="100%" preserveAspectRatio="none">
+                            <Defs>
+                                <LinearGradient id={`split-mask-${track.id}`} x1="0" y1="0" x2="0" y2="1">
+                                    <Stop offset="0" stopColor={Colors.bgPrimary} stopOpacity="1"/>
+                                    <Stop offset="1" stopColor={Colors.bgPrimary} stopOpacity="0"/>
+                                </LinearGradient>
+                            </Defs>
+                            <Rect x="0" y="0" width="100%" height="100%" fill={`url(#split-mask-${track.id})`}/>
+                        </Svg>
+                    </View>
                 </View>
             ) : (
                 <View style={[styles.splitSlideContainer, styles.splitRowDesktop]}>
@@ -1234,11 +1328,17 @@ function FullImageOverlaySlide({
     onLeaveGlossary: () => void;
 }) {
     return (
-        <View style={[styles.fullImageSlideRoot, {height: pageHeight}]}>
-            <View style={styles.fullImageTopCredit}>
+        <View
+            style={[
+                styles.fullImageSlideRoot,
+                {height: pageHeight},
+                !isDesktop && styles.fullImageSlideRootMobile,
+            ]}
+        >
+            <View style={[styles.fullImageTopCredit, !isDesktop && styles.fullImageTopCreditMobile]}>
                 {(step.imageCaption || step.title) && (
                     <View style={styles.fullImageCreditRow}>
-                        <Info size={13} color={Colors.textSecondary}/>
+                        <Info size={14} color={Colors.textPrimary}/>
                         <Text style={styles.fullImageCreditText} numberOfLines={1}>
                             {step.imageCaption ?? step.title}
                         </Text>
@@ -1257,7 +1357,7 @@ function FullImageOverlaySlide({
                 <View
                     style={[
                         styles.fullImageTextBackdrop,
-                        !isDesktop && {maxHeight: pageHeight * 0.56},
+                        !isDesktop && {maxHeight: pageHeight * 0.44},
                         step.isBrazil && styles.brazilHighlightBorder,
                     ]}
                 >
@@ -1274,15 +1374,12 @@ function FullImageOverlaySlide({
                             </View>
                         )}
 
-                        {step.title && (
-                            <Text style={[styles.fullImageOverlayTitle, !isDesktop && {fontSize: 20, lineHeight: 26}]}>
-                                {step.title}
-                            </Text>
-                        )}
-
                         <RichGlossaryText
                             text={step.text}
-                            style={[styles.fullImageOverlayBodyText, !isDesktop && {fontSize: 15, lineHeight: 22}]}
+                            style={[
+                                styles.fullImageOverlayBodyText,
+                                isDesktop && styles.fullImageOverlayBodyTextDesktop,
+                            ]}
                             isDesktop={isDesktop}
                             onSelectGlossary={onOpenGlossary}
                             onLeaveGlossary={onLeaveGlossary}
@@ -1519,11 +1616,21 @@ const styles = StyleSheet.create({
         ...Typography.coordinate,
         color: Colors.borderStrong,
     },
-    fullImageVignette: {
+    mobileAmbientBackdrop: {
         ...StyleSheet.absoluteFill,
-        backgroundColor: "rgba(14, 12, 10, 0.32)",
+        opacity: 0.55,
     },
-
+    mobileAmbientDimmer: {
+        ...StyleSheet.absoluteFill,
+        backgroundColor: "rgba(20, 17, 15, 0.55)",
+    },
+    storyGradientScrim: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: "60%",
+    },
     coverCenteredContainer: {
         ...StyleSheet.absoluteFill,
         alignItems: "center",
@@ -1574,6 +1681,26 @@ const styles = StyleSheet.create({
         paddingVertical: 48,
         overflow: "hidden",
     },
+    splitTrackBackdropMobile: {
+        ...StyleSheet.absoluteFill,
+        backgroundColor: "transparent",
+        overflow: "hidden",
+    },
+    splitColMobileOverlay: {
+        width: "100%",
+        flexDirection: "column",
+    },
+    splitMobileTopShield: {
+        width: "100%",
+        backgroundColor: Colors.bgPrimary,
+        paddingHorizontal: Spacing.md,
+        paddingTop: 52,
+        paddingBottom: Spacing.xs,
+    },
+    splitMobileBottomFade: {
+        width: "100%",
+        height: 28,
+    },
     splitSlideRoot: {
         width: "100%",
         backgroundColor: "transparent",
@@ -1609,7 +1736,7 @@ const styles = StyleSheet.create({
         flexDirection: "column",
         paddingHorizontal: Spacing.md,
         paddingTop: 36,
-        gap: Spacing.md,
+        gap: Spacing.lg,
     },
     mobileSplitTextScroll: {
         flex: 1,
@@ -1696,54 +1823,62 @@ const styles = StyleSheet.create({
     fullImageSlideRoot: {
         width: "100%",
         justifyContent: "space-between",
-        paddingTop: 56,
-        paddingBottom: 64,
+        paddingTop: 24,
+        paddingBottom: 72,
+    },
+    fullImageSlideRootMobile: {
+        paddingTop: 16,
     },
     fullImageTopCredit: {
         paddingHorizontal: Spacing.lg,
+    },
+    fullImageTopCreditMobile: {
+        paddingHorizontal: Spacing.md,
     },
     fullImageCreditRow: {
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
         alignSelf: "flex-start",
-        backgroundColor: "rgba(20, 17, 15, 0.78)",
+        backgroundColor: "rgba(20, 17, 15, 0.55)",
         paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: Radii.sm,
+        paddingVertical: 6,
+        borderRadius: Radii.full,
     },
     fullImageCreditText: {
         ...Typography.bodySmall,
-        fontSize: 12,
-        color: Colors.textSecondary,
+        color: Colors.textPrimary,
+        fontSize: 13,
+        fontFamily: Typography.bodySemiBold.fontFamily,
     },
     fullImageBottomOverlay: {
         width: "100%",
+        alignItems: "center",
     },
     fullImageBottomOverlayDesktop: {
-        paddingLeft: Spacing.xxxl,
-        paddingRight: Spacing.xl,
+        paddingHorizontal: Spacing.xxxl,
     },
     fullImageBottomOverlayMobile: {
-        paddingHorizontal: Spacing.md,
+        paddingHorizontal: Spacing.lg,
     },
     fullImageTextBackdrop: {
-        maxWidth: 480,
-        backgroundColor: "rgba(20, 17, 15, 0.86)",
-        borderLeftWidth: 3,
-        borderLeftColor: Colors.accentPrimary,
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.lg,
-        borderRadius: Radii.md,
-    },
-    fullImageOverlayTitle: {
-        ...Typography.h2,
-        color: Colors.textPrimary,
-        marginBottom: Spacing.xs,
+        maxWidth: 680,
+        width: "100%",
+        paddingVertical: Spacing.sm,
+        paddingHorizontal: Spacing.xs,
     },
     fullImageOverlayBodyText: {
         ...Typography.body,
-        color: Colors.textPrimary,
+        fontSize: 18,
+        lineHeight: 26,
+        color: "#FFFFFF",
+        textShadowColor: "rgba(0, 0, 0, 0.85)",
+        textShadowOffset: {width: 0, height: 1},
+        textShadowRadius: 8,
+    },
+    fullImageOverlayBodyTextDesktop: {
+        fontSize: 21,
+        lineHeight: 32,
     },
 
     metaBadgeRow: {

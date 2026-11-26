@@ -48,7 +48,7 @@ export const SECOES: Record<string, SectionData> = {
             {
                 id: '1',
                 layout: 'full-image',
-                title: 'Cifra de César',
+                imageFit: 'contain',
                 image: require('@/assets/images/cifra_cesar.svg'),
                 text: 'Por volta de 100 a.C, o imperador romano Júlio César era conhecido por usar uma [[cifra-substituicao|cifra de substituição]] para transmitir mensagens ao generais do seu exército na frente de guerra.',
                 isBrazil: false
@@ -89,7 +89,7 @@ export const SECOES: Record<string, SectionData> = {
                 title: 'Como Cifrar: Passo 2',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
                 camera: {scale: 1.15, focusX: -0.25, focusY: -0.25},
-                text: 'Primeiro, repetimos as letras da senha até cobrir todas as 9 letras da mensagem:\n\nMensagem: I R  P A R A  S U L\nSenha:    M E  I A M E  I A M',
+                text: 'Primeiro, repetimos as letras da senha até ter a mesma quantidade de caracteres da mensagem. Nesse caso, a senha precisa ter 9 letras:\n\nMensagem: IR PARA SUL\nSenha:    MEIAMEIAM',
                 isBrazil: false,
             },
             {
@@ -133,7 +133,7 @@ export const SECOES: Record<string, SectionData> = {
             {
                 id: '2.7',
                 layout: 'split',
-                imagePosition: 'right',
+                imagePosition: 'left',
                 image: {uri: 'https://s2.glbimg.com/xLbZ_qMpUDRA35L6cxYbcnjqMOc=/e.glbimg.com/og/ed/f/original/2018/10/18/charles_babbage_1860.jpg'},
                 imageCaption: 'Charles Babbage',
                 imageFit: "contain",
@@ -151,16 +151,19 @@ export const SECOES: Record<string, SectionData> = {
             {
                 id: '3.1',
                 layout: 'full-image',
-                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/0/0a/Enigma_Machine_at_NSA.jpg?utm_source=pt.wikipedia.org&utm_campaign=imageinfo&utm_content=original'},
-                camera: {scale: 1.8, focusX: 0, focusY: -0.2},
+                imagePosition: 'right',
+                // image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Enigma-Machine.jpg?utm_source=pt.wikipedia.org&utm_campaign=index&utm_content=original'},
+                image: {uri: 'https://www.christies.com/-/jssmedia/images/features/articles/2024/12/guide-updates/collecting-guide-enigma-machines/enigma-machine-main.jpg?mw=2301&mh=1438&hash=74ef0fa22b03037c1dd064220fe5a81ed3355d57'},
+                imageFit: 'contain',
+                camera: {scale: 1.0, focusX: 0, focusY: -0.2},
                 text: 'No final da Primeira Guerra, o engenheiro alemão Arthur Scherbius inventou a Máquina Enigma, cujo uso se consolidou na Segunda Guerra. A Enigma era uma [[maquina-rotores|máquina de rotores]], semelhante a uma máquina de escrever, em que os rotores giravam em ritmos diferentes a cada tecla pressionada, trocando as letras e gerando o texto cifrado. Nesse sistema, a chave era a combinação diária da ordem, da posição inicial dos rotores e das conexões de cabos da máquina.',
                 isBrazil: false,
             },
             {
                 id: '3.2',
                 layout: "full-image",
-                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/0/0a/Enigma_Machine_at_NSA.jpg?utm_source=pt.wikipedia.org&utm_campaign=imageinfo&utm_content=original'},
-                camera: {scale: 2.1, focusX: 0.1, focusY: 0.2},
+                image: {uri: 'https://www.christies.com/-/jssmedia/images/features/articles/2024/12/guide-updates/collecting-guide-enigma-machines/enigma-machine-main.jpg?mw=2301&mh=1438&hash=74ef0fa22b03037c1dd064220fe5a81ed3355d57'},
+                camera: {scale: 1.6, focusX: 0.1, focusY: -0.1},
                 text: 'No início, acreditava-se que era impossível descriptografar uma mensagem criada pela Enigma.',
                 isBrazil: false,
             },
