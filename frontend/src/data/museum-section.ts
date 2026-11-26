@@ -29,6 +29,8 @@ export interface StoryStep {
     imageCaption?: string;
     camera?: CameraPose;
     imagePosition?: 'left' | 'right';
+    imageFit?: 'contain' | 'cover';
+    imageAspectRatio?: number;
     isBrazil: boolean;
 }
 
@@ -44,18 +46,23 @@ export const SECOES: Record<string, SectionData> = {
         steps: [
             {
                 id: '1',
-                layout: 'split',
-                imagePosition: 'right',
-                year: '~100 a.C.',
+                layout: 'full-image',
                 title: 'Cifra de César',
-                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/2/2b/Caesar3.svg?utm_source=pt.wikipedia.org&utm_campaign=index&utm_content=original'},
-                text: 'Por volta de 100 a.C, o imperador romano Júlio César era conhecido por usar uma (cifra de substituiçao)[Glossário: Uma cifra é qualquer algoritmo usado para criptografia ou descriptografia. Uma cifra de substituiçao substitui cada caractere da mensagem a ser criptografada por outro para formar o texto cifrado] para transmitir mensagens ao generais do seu exército na frente de guerra. \n' +
-                    'Na cifra usada por César, cada caractere era deslocado em três casas, portanto, "A" se tornava "D", "B" se tornava "E", e assim por diante',
+                image: require('@/assets/images/cifra_cesar.svg'),
+                text: 'Por volta de 100 a.C, o imperador romano Júlio César era conhecido por usar uma [[cifra-substituicao|cifra de substituição]] para transmitir mensagens ao generais do seu exército na frente de guerra.',
+                isBrazil: false
+            },
+            {
+                id: '1.1',
+                layout: 'full-image',
+                image: require('@/assets/images/cifra_cesar.svg'),
+                camera: {scale: 1.3, focusX: -0.5, focusY: 0},
+                text: 'Na cifra usada por César, cada caractere era deslocado em três casas, portanto, "A" se tornava "D", "B" se tornava "E", e assim por diante',
                 isBrazil: false
             },
             {
                 id: '2',
-                layout: 'full-image',
+                layout: 'split',
                 year: 'SÉCULO XVI',
                 title: 'Cifra de Vigenère',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
@@ -78,6 +85,7 @@ export const SECOES: Record<string, SectionData> = {
                 year: 'SÉCULO XIX',
                 image: {uri: 'https://s2.glbimg.com/xLbZ_qMpUDRA35L6cxYbcnjqMOc=/e.glbimg.com/og/ed/f/original/2018/10/18/charles_babbage_1860.jpg'},
                 imageCaption: 'Charles Babbage',
+                imageFit: "contain",
                 text: 'Apesar disso, ela foi quebrada no século XIX por Charles Babbage e por Friedrich Kasiski, ao perceberem que, quando uma mesma palavra era cifrada pelo mesmo trecho da senha, letras repetidas eram geradas no texto final. Ao medir a distância entre essas repetições, dá pra descobrir o tamanho da senha, separar as letras que usaram o mesmo deslocamento e aplicar a análise de frequência.',
                 isBrazil: false,
             },

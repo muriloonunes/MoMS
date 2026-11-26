@@ -2,11 +2,11 @@ import {ImageSourcePropType} from "react-native";
 
 export interface GlossaryEntry {
     id: string;
-    term: string;                           // Ex: "Criptografia" ou "Alan Turing"
+    term: string;
     category: 'conceito' | 'pessoa' | 'organizacao' | 'tecnica';
-    summary: string;                        // Ex: "Do grego kryptós (escondido) e gráphein (escrita)..."
+    summary: string;
     image?: ImageSourcePropType | { uri: string };
-    extraInfo?: string;                     // Ex: "1912 – 1954 • Matemático e Criptoanalista"
+    extraInfo?: string;
 }
 
 export const GLOSSARY: Record<string, GlossaryEntry> = {
@@ -21,21 +21,18 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
         id: 'analise-frequencia',
         term: 'Análise de Frequência',
         category: 'tecnica',
-        extraInfo: 'Criptoanálise Estatística',
         summary: 'Técnica que estuda a frequência com que letras ou grupos de letras aparecem em um texto cifrado para descobrir o padrão de substituição.',
     },
     'maquina-rotores': {
         id: 'maquina-rotores',
         term: 'Máquina de Rotores',
         category: 'tecnica',
-        extraInfo: 'Dispositivo Eletromecânico',
         summary: 'Dispositivo criptográfico composto por discos giratórios com fiações elétricas internas que alteram o alfabeto de substituição a cada tecla pressionada.',
     },
     'alan-turing': {
         id: 'alan-turing',
         term: 'Alan Turing',
         category: 'pessoa',
-        extraInfo: '1912 – 1954 • Matemático e Criptoanalista',
         summary: 'Matemático e cientista da computação britânico que liderou a criação da Bombe em Bletchley Park para decifrar mensagens da Máquina Enigma.',
     },
     'aliados': {

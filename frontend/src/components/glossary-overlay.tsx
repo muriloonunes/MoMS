@@ -1,7 +1,8 @@
-import {GlossaryEntry} from "@/data/glossary";
+import {GLOSSARY, GlossaryEntry} from "@/data/glossary";
 import {BookOpen, X} from "lucide-react-native";
 import {Modal, Platform, Pressable, StyleSheet, Text, View} from "react-native";
 import {Colors, Radii, Shadows, Spacing, Typography} from "@/constants/theme";
+import {useMemo} from "react";
 
 export interface ActiveGlossaryState {
     entry: GlossaryEntry;
@@ -117,6 +118,100 @@ export function GlossaryOverlay({
     );
 }
 
+export function RichGlossaryText({
+                              text,
+                              style,
+                              isDesktop,
+                              onSelectGlossary,
+                              onLeaveGlossary,
+                          }: {
+    text: string;
+    style?: any;
+    isDesktop: boolean;
+    onSelectGlossary: (entry: GlossaryEntry, anchor?: { x: number; y: number }) => void;
+    onLeaveGlossary: () => void;
+}) {
+    const segments = useMemo(() => {
+        const result: Array<{
+            type: "text" | "glossary";
+            content: string;
+            entry?: GlossaryEntry;
+        }> = [];
+
+        const pattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
+
+        while ((match = pattern.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                result.push({
+                    type: "text",
+                    content: text.slice(lastIndex, match.index),
+                });
+            }
+
+            const rawId = match[1].trim().toLowerCase();
+            const label = (match[2] ?? match[1]).trim();
+            const entry: GlossaryEntry = GLOSSARY[rawId] ?? {
+                id: rawId,
+                term: label,
+                category: "conceito",
+                summary: "Verbete em catalogação pela equipe de curadoria do MoMS.",
+            };
+            result.push({type: "glossary", content: label, entry});
+
+            lastIndex = pattern.lastIndex;
+        }
+
+        if (lastIndex < text.length) {
+            result.push({type: "text", content: text.slice(lastIndex)});
+        }
+
+        return result;
+    }, [text]);
+
+    const extractAnchorFromEvent = (e: any): { x: number; y: number } | undefined => {
+        const native = e?.nativeEvent ?? e;
+        const x = native?.clientX ?? native?.pageX;
+        const y = native?.clientY ?? native?.pageY;
+        if (typeof x === "number" && typeof y === "number") return {x, y};
+        return undefined;
+    };
+
+    return (
+        <Text style={style}>
+            {segments.map((seg, idx) => {
+                if (seg.type === "text" || !seg.entry) {
+                    return <Text key={idx}>{seg.content}</Text>;
+                }
+
+                const entry = seg.entry;
+                const webHoverProps =
+                    Platform.OS === "web" && isDesktop
+                        ? {
+                            onMouseEnter: (e: any) =>
+                                onSelectGlossary(entry, extractAnchorFromEvent(e)),
+                            onMouseLeave: () => onLeaveGlossary(),
+                        }
+                        : {};
+
+                return (
+                    <Text
+                        key={idx}
+                        onPress={(e: any) =>
+                            onSelectGlossary(entry, extractAnchorFromEvent(e))
+                        }
+                        style={styles.glossaryInlineTerm}
+                        {...(webHoverProps as any)}
+                    >
+                        {seg.content}
+                    </Text>
+                );
+            })}
+        </Text>
+    );
+}
+
 const styles = StyleSheet.create({
     desktopPopoverCard: {
         position: "absolute",
@@ -189,5 +284,13 @@ const styles = StyleSheet.create({
         ...Typography.bodySmall,
         color: Colors.textSecondary,
         lineHeight: 20,
+    },
+    glossaryInlineTerm: {
+        color: Colors.accentPrimaryHover,
+        fontFamily: Typography.bodySemiBold.fontFamily,
+        textDecorationLine: "underline",
+        textDecorationStyle: "dotted",
+        textDecorationColor: Colors.accentPrimary,
+        ...Platform.select({web: {cursor: "pointer" as any}}),
     },
 })

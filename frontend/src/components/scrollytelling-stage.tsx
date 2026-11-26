@@ -1,22 +1,24 @@
-import React, {useMemo, useRef, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {ImageSourcePropType, Platform, Pressable, ScrollView, StyleSheet, Text, View,} from "react-native";
 import {Image} from "expo-image";
 import Animated, {
+    Easing,
     Extrapolation,
     interpolate,
-    runOnJS,
     SharedValue,
     useAnimatedRef,
     useAnimatedScrollHandler,
     useAnimatedStyle,
-    useSharedValue,
+    useDerivedValue,
+    useSharedValue, withTiming,
 } from "react-native-reanimated";
 import {ArrowLeft, ArrowRight, ChevronDown, ChevronUp, ImageIcon, Info, MapPin,} from "lucide-react-native";
 import {Colors, Layout, Radii, Shadows, Spacing, Typography} from "@/constants/theme";
 import {useResponsive} from "@/hooks/use-responsive";
 import {SectionData, StoryStep} from "@/data/museum-section";
-import {GLOSSARY, GlossaryEntry} from "@/data/glossary";
-import {GlossaryOverlay, ActiveGlossaryState} from "@/components/glossary-overlay";
+import {GlossaryEntry} from "@/data/glossary";
+import {ActiveGlossaryState, GlossaryOverlay, RichGlossaryText} from "@/components/glossary-overlay";
+import {scheduleOnRN} from "react-native-worklets";
 
 function hasValidImage(image?: ImageSourcePropType | { uri: string }): boolean {
     if (!image) return false;
@@ -59,18 +61,48 @@ export function ScrollytellingStage({
     const scrollHandler = useAnimatedScrollHandler({
         onScroll: (event) => {
             scrollY.value = event.contentOffset.y;
-            runOnJS(updatePageIndex)(event.contentOffset.y);
+            scheduleOnRN(updatePageIndex, event.contentOffset.y)
         },
     });
 
-    const scrollToPage = (targetIndex: number) => {
-        const clamped = Math.max(0, Math.min(totalPages - 1, targetIndex));
-        setCurrentPageIndex(clamped);
-        scrollRef.current?.scrollTo({
-            y: clamped * stageHeight,
-            animated: true,
-        });
-    };
+    const scrollToPage = useCallback(
+        (targetIndex: number) => {
+            const clamped = Math.max(0, Math.min(totalPages - 1, targetIndex));
+            setCurrentPageIndex(clamped);
+            scrollRef.current?.scrollTo({
+                y: clamped * stageHeight,
+                animated: true,
+            });
+        },
+        [totalPages, stageHeight, scrollRef]
+    );
+
+    useEffect(() => {
+        if (Platform.OS !== "web") return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement | null;
+            if (
+                target &&
+                (target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.isContentEditable)
+            ) {
+                return;
+            }
+
+            if (e.key === "ArrowDown" || e.key === "PageDown") {
+                e.preventDefault();
+                scrollToPage(currentPageIndex + 1);
+            } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+                e.preventDefault();
+                scrollToPage(currentPageIndex - 1);
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [currentPageIndex, scrollToPage]);
 
     const progressBarStyle = useAnimatedStyle(() => {
         const maxScroll = Math.max((totalPages - 1) * stageHeight, 1);
@@ -92,6 +124,49 @@ export function ScrollytellingStage({
         const num = Number(section.sectionId);
         return num > 1 ? (String(num - 1) as SectionData["sectionId"]) : null;
     }, [section.sectionId]);
+
+    const fullImageTracks = useMemo(() => {
+        const tracks: Array<{
+            id: string;
+            image?: ImageSourcePropType | { uri: string };
+            title?: string;
+            keyframes: Array<{
+                pageIndex: number;
+                scale: number;
+                focusX: number;
+                focusY: number;
+            }>;
+        }> = [];
+
+        section.steps.forEach((step, index) => {
+            if (step.layout !== "full-image") return;
+            const pageIndex = coverPagesCount + index;
+            const prevStep = index > 0 ? section.steps[index - 1] : undefined;
+            const sameImageAsPrev =
+                prevStep?.layout === "full-image" &&
+                JSON.stringify(prevStep.image) === JSON.stringify(step.image);
+
+            const pose = {
+                pageIndex,
+                scale: step.camera?.scale ?? 1,
+                focusX: step.camera?.focusX ?? 0,
+                focusY: step.camera?.focusY ?? 0,
+            };
+
+            if (sameImageAsPrev && tracks.length > 0) {
+                tracks[tracks.length - 1].keyframes.push(pose);
+            } else {
+                tracks.push({
+                    id: step.id,
+                    image: step.image,
+                    title: step.title,
+                    keyframes: [pose],
+                });
+            }
+        });
+
+        return tracks;
+    }, [section.steps, coverPagesCount]);
 
     const handleOpenGlossary = (entry: GlossaryEntry, anchor?: { x: number; y: number }) => {
         if (hoverCloseTimeout.current) {
@@ -129,19 +204,31 @@ export function ScrollytellingStage({
                         ]}
                     >
                         <ArrowLeft size={16} color={Colors.textPrimary}/>
-                        <Text style={styles.hudBackText}>Início</Text>
+                        {isDesktop && <Text style={styles.hudBackText}>Início</Text>}
                     </Pressable>
 
-                    <View style={styles.hudTitleGroup}>
-                        <Text style={styles.hudCodeText}>{section.code}</Text>
-                        <Text style={styles.hudDot}>•</Text>
-                        <Text style={styles.hudSectionTitle} numberOfLines={1}>
+                    <View
+                        style={[
+                            styles.hudTitleGroup,
+                            !isDesktop && styles.hudTitleGroupMobile,
+                        ]}
+                    >
+                        <Text style={styles.hudCodeText}>
+                            {isDesktop ? `${section.code}:` : section.code}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.hudSectionTitle,
+                                !isDesktop && styles.hudSectionTitleMobile,
+                            ]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
                             {section.title}
                         </Text>
                     </View>
 
-                    <View style={styles.hudStepBadge}>
-                    </View>
+                    {isDesktop && <View style={styles.hudRightBalanceSpacer}/>}
                 </View>
 
                 <View style={styles.progressTrack}>
@@ -167,23 +254,16 @@ export function ScrollytellingStage({
                         scrollY={scrollY}
                     />
 
-                    {section.steps.map((step, index) => {
-                        if (step.layout !== "full-image") return null;
-                        const pageIndex = coverPagesCount + index;
-                        const prevStep = index > 0 ? section.steps[index - 1] : undefined;
-                        return (
-                            <FullImageBackdropLayer
-                                key={step.id}
-                                step={step}
-                                prevStep={prevStep}
-                                pageIndex={pageIndex}
-                                pageHeight={stageHeight}
-                                stageWidth={width}
-                                stageHeight={stageHeight}
-                                scrollY={scrollY}
-                            />
-                        );
-                    })}
+                    {fullImageTracks.map((track) => (
+                        <FullImageTrackLayer
+                            key={track.id}
+                            track={track}
+                            pageHeight={stageHeight}
+                            stageWidth={width}
+                            stageHeight={stageHeight}
+                            scrollY={scrollY}
+                        />
+                    ))}
                 </View>
 
                 <Animated.ScrollView
@@ -319,12 +399,7 @@ function FixedCoverStage({
             Extrapolation.CLAMP
         );
 
-        const opacity = interpolate(
-            scrollY.value,
-            [coverEndScroll + pageHeight * 0.6, coverEndScroll + pageHeight],
-            [1, 0],
-            Extrapolation.CLAMP
-        );
+        const opacity = scrollY.value > coverEndScroll + pageHeight ? 0 : 1;
 
         return {
             opacity,
@@ -420,9 +495,6 @@ function FixedCoverStage({
             <View style={styles.coverCenteredContainer}>
                 <View style={styles.coverContent}>
                     <Animated.View style={titleAnimStyle}>
-                        <Text style={styles.coverKicker}>
-                            {section.code} • {section.period}
-                        </Text>
                         <Text
                             accessibilityRole="header"
                             style={[
@@ -456,108 +528,135 @@ function FixedCoverStage({
     );
 }
 
-function FullImageBackdropLayer({
-                                    step,
-                                    prevStep,
-                                    pageIndex,
-                                    pageHeight,
-                                    stageWidth,
-                                    stageHeight,
-                                    scrollY,
-                                }: {
-    step: StoryStep;
-    prevStep?: StoryStep;
-    pageIndex: number;
+function FullImageTrackLayer({
+                                 track,
+                                 pageHeight,
+                                 stageWidth,
+                                 stageHeight,
+                                 scrollY,
+                             }: {
+    track: {
+        id: string;
+        image?: ImageSourcePropType | { uri: string };
+        title?: string;
+        keyframes: Array<{
+            pageIndex: number;
+            scale: number;
+            focusX: number;
+            focusY: number;
+        }>;
+    };
     pageHeight: number;
     stageWidth: number;
     stageHeight: number;
     scrollY: SharedValue<number>;
 }) {
-    const centerScroll = pageIndex * pageHeight;
-    const prevScroll = (pageIndex - 1) * pageHeight;
-    const nextScroll = (pageIndex + 1) * pageHeight;
+    const firstPage = track.keyframes[0].pageIndex;
+    const lastPage = track.keyframes[track.keyframes.length - 1].pageIndex;
+    const firstCenter = firstPage * pageHeight;
+    const lastCenter = lastPage * pageHeight;
 
-    const targetScale = step.camera?.scale ?? 1;
-    const targetFocusX = step.camera?.focusX ?? 0;
-    const targetFocusY = step.camera?.focusY ?? 0;
+    const scrollInputRange = useMemo(
+        () => track.keyframes.map((kf) => kf.pageIndex * pageHeight),
+        [track.keyframes, pageHeight]
+    );
+    const scaleOutputRange = useMemo(
+        () => track.keyframes.map((kf) => kf.scale),
+        [track.keyframes]
+    );
+    const focusXOutputRange = useMemo(
+        () => track.keyframes.map((kf) => kf.focusX),
+        [track.keyframes]
+    );
+    const focusYOutputRange = useMemo(
+        () => track.keyframes.map((kf) => kf.focusY),
+        [track.keyframes]
+    );
 
-    const isSameImageAsPrev =
-        prevStep?.layout === "full-image" &&
-        JSON.stringify(prevStep.image) === JSON.stringify(step.image);
+    const containerSlideStyle = useAnimatedStyle(() => {
+        const enterFromBottom = firstCenter - scrollY.value;
+        const exitToTop = lastCenter - scrollY.value;
 
-    const startScale = isSameImageAsPrev ? (prevStep?.camera?.scale ?? 1) : 1.0;
-    const startFocusX = isSameImageAsPrev ? (prevStep?.camera?.focusX ?? 0) : 0;
-    const startFocusY = isSameImageAsPrev ? (prevStep?.camera?.focusY ?? 0) : 0;
+        let containerY = 0;
+        if (scrollY.value < firstCenter) {
+            containerY = enterFromBottom;
+        } else if (scrollY.value > lastCenter) {
+            containerY = exitToTop;
+        }
 
-    const animatedImageStyle = useAnimatedStyle(() => {
-        const opacity = isSameImageAsPrev
-            ? interpolate(
-                scrollY.value,
-                [prevScroll + pageHeight * 0.45, prevScroll + pageHeight * 0.55, nextScroll - pageHeight * 0.25, nextScroll + pageHeight * 0.25],
-                [0, 1, 1, 0],
-                Extrapolation.CLAMP
-            )
-            : interpolate(
-                scrollY.value,
-                [prevScroll + pageHeight * 0.2, centerScroll - pageHeight * 0.15, centerScroll, nextScroll - pageHeight * 0.2, nextScroll + pageHeight * 0.25],
-                [0, 1, 1, 1, 0],
-                Extrapolation.CLAMP
-            );
-
-        const scale = interpolate(
-            scrollY.value,
-            [prevScroll, centerScroll],
-            [startScale, targetScale],
-            Extrapolation.CLAMP
-        );
-
-        const focusX = interpolate(
-            scrollY.value,
-            [prevScroll, centerScroll],
-            [startFocusX, targetFocusX],
-            Extrapolation.CLAMP
-        );
-
-        const focusY = interpolate(
-            scrollY.value,
-            [prevScroll, centerScroll],
-            [startFocusY, targetFocusY],
-            Extrapolation.CLAMP
-        );
-
-        const maxOffsetX = stageWidth * (scale - 1) * 0.5;
-        const maxOffsetY = stageHeight * (scale - 1) * 0.5;
-        const translateX = -focusX * 2 * maxOffsetX;
-        const translateY = -focusY * 2 * maxOffsetY;
+        const isVisible =
+            scrollY.value >= firstCenter - pageHeight &&
+            scrollY.value <= lastCenter + pageHeight;
 
         return {
-            opacity,
-            transform: [{translateX}, {translateY}, {scale}],
+            opacity: isVisible ? 1 : 0,
+            transform: [{translateY: containerY}],
         };
     });
 
-    const validImage = hasValidImage(step.image);
+    const activeKeyframeIndex = useDerivedValue(() => {
+        const triggerAnticipation = pageHeight * 0.4;
+        let current = 0;
+
+        for (let i = 0; i < scrollInputRange.length; i++) {
+            if (scrollY.value >= scrollInputRange[i] - triggerAnticipation) {
+                current = i;
+            }
+        }
+        return current;
+    });
+
+    const animatedImageStyle = useAnimatedStyle(() => {
+        const idx = activeKeyframeIndex.value;
+        const targetScale = scaleOutputRange[idx];
+        const targetFocusX = focusXOutputRange[idx];
+        const targetFocusY = focusYOutputRange[idx];
+
+        const maxOffsetX = stageWidth * (targetScale - 1) * 0.5;
+        const maxOffsetY = stageHeight * (targetScale - 1) * 0.5;
+        const targetTranslateX = -targetFocusX * 2 * maxOffsetX;
+        const targetTranslateY = -targetFocusY * 2 * maxOffsetY;
+
+        const timingConfig = {
+            duration: 750,
+            easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        };
+
+        return {
+            transform: [
+                { translateX: withTiming(targetTranslateX, timingConfig) },
+                { translateY: withTiming(targetTranslateY, timingConfig) },
+                { scale: withTiming(targetScale, timingConfig) },
+            ],
+        };
+    });
+
+    const validImage = hasValidImage(track.image);
+    const firstKeyframe = track.keyframes[0];
 
     return (
-        <Animated.View style={[styles.fullBleedLayer, animatedImageStyle]}>
-            {validImage ? (
-                <Image
-                    source={step.image as any}
-                    style={styles.fullBleedImage}
-                    contentFit="cover"
-                />
-            ) : (
-                <View style={styles.backdropPlaceholder}>
-                    <ImageIcon size={48} color={Colors.borderStrong}/>
-                    <Text style={styles.placeholderTitle}>
-                        {step.title ?? "Imagem Histórica em Curadoria"}
-                    </Text>
-                    <Text style={styles.placeholderCoords}>
-                        CÂMERA: ZOOM {targetScale.toFixed(1)}x • X {targetFocusX} • Y {targetFocusY}
-                    </Text>
-                </View>
-            )}
-            <View style={styles.fullImageVignette}/>
+        <Animated.View style={[styles.fullImageTrackContainer, containerSlideStyle]}>
+            <Animated.View style={[styles.fullBleedLayer, animatedImageStyle]}>
+                {validImage ? (
+                    <Image
+                        source={track.image as any}
+                        style={styles.fullBleedImage}
+                        contentFit="cover"
+                    />
+                ) : (
+                    <View style={styles.backdropPlaceholder}>
+                        <ImageIcon size={48} color={Colors.borderStrong}/>
+                        <Text style={styles.placeholderTitle}>
+                            {track.title ?? "Imagem Histórica em Curadoria"}
+                        </Text>
+                        <Text style={styles.placeholderCoords}>
+                            CÂMERA: ZOOM {firstKeyframe.scale.toFixed(1)}x • X {firstKeyframe.focusX} •
+                            Y {firstKeyframe.focusY}
+                        </Text>
+                    </View>
+                )}
+                <View style={styles.fullImageVignette}/>
+            </Animated.View>
         </Animated.View>
     );
 }
@@ -577,6 +676,7 @@ function SplitStorySlide({
 }) {
     const imageOnLeft = step.imagePosition === "left";
     const validImage = hasValidImage(step.image);
+    const contentFit = step.imageFit ?? "contain";
 
     const textBody = (
         <View style={styles.splitTextInner}>
@@ -612,15 +712,24 @@ function SplitStorySlide({
         <View
             style={[
                 styles.splitImagePane,
-                isDesktop ? {minHeight: pageHeight * 0.72} : {height: pageHeight * 0.42},
+                isDesktop
+                    ? {height: pageHeight * 0.72, maxHeight: 680}
+                    : {height: pageHeight * 0.42},
             ]}
         >
-            <View style={[styles.splitImageFrame, !isDesktop && {aspectRatio: undefined, flex: 1}]}>
+            <View
+                style={[
+                    styles.splitImageFrame,
+                    step.imageAspectRatio
+                        ? {aspectRatio: step.imageAspectRatio, flex: undefined}
+                        : {flex: 1},
+                ]}
+            >
                 {validImage ? (
                     <Image
                         source={step.image as any}
                         style={styles.splitImage}
-                        contentFit="cover"
+                        contentFit={contentFit}
                     />
                 ) : (
                     <View style={styles.splitImagePlaceholder}>
@@ -908,128 +1017,6 @@ function SectionFooterSlide({
     );
 }
 
-/**
- * Parser de Glossário
- */
-function RichGlossaryText({
-                              text,
-                              style,
-                              isDesktop,
-                              onSelectGlossary,
-                              onLeaveGlossary,
-                          }: {
-    text: string;
-    style?: any;
-    isDesktop: boolean;
-    onSelectGlossary: (entry: GlossaryEntry, anchor?: { x: number; y: number }) => void;
-    onLeaveGlossary: () => void;
-}) {
-    const segments = useMemo(() => {
-        const result: Array<{
-            type: "text" | "glossary";
-            content: string;
-            entry?: GlossaryEntry;
-        }> = [];
-
-        const pattern =
-            /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]|\(([^)]+)\)\[Gloss[áa]rio(?::\s*([^\]]+))?\]/gi;
-        let lastIndex = 0;
-        let match: RegExpExecArray | null;
-
-        while ((match = pattern.exec(text)) !== null) {
-            if (match.index > lastIndex) {
-                result.push({
-                    type: "text",
-                    content: text.slice(lastIndex, match.index),
-                });
-            }
-
-            if (match[1]) {
-                const rawId = match[1].trim().toLowerCase();
-                const label = (match[2] ?? match[1]).trim();
-                const entry: GlossaryEntry = GLOSSARY[rawId] ?? {
-                    id: rawId,
-                    term: label,
-                    category: "conceito",
-                    summary: "Verbete em catalogação pela equipe de curadoria do MoMS.",
-                };
-                result.push({type: "glossary", content: label, entry});
-            } else if (match[3]) {
-                const label = match[3].trim();
-                const inlineExplanation = match[4]?.trim();
-                const normalizedKey = label
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/[\u0300-\u036f]/g, "")
-                    .replace(/[^a-z0-9]+/g, "-");
-
-                const catalogEntry = GLOSSARY[normalizedKey];
-                const entry: GlossaryEntry = catalogEntry
-                    ? {...catalogEntry, summary: inlineExplanation ?? catalogEntry.summary}
-                    : {
-                        id: normalizedKey,
-                        term: label.charAt(0).toUpperCase() + label.slice(1),
-                        category: "conceito",
-                        summary:
-                            inlineExplanation ??
-                            "Verbete em catalogação pela equipe de curadoria do MoMS.",
-                    };
-
-                result.push({type: "glossary", content: label, entry});
-            }
-
-            lastIndex = pattern.lastIndex;
-        }
-
-        if (lastIndex < text.length) {
-            result.push({type: "text", content: text.slice(lastIndex)});
-        }
-
-        return result;
-    }, [text]);
-
-    const extractAnchorFromEvent = (e: any): { x: number; y: number } | undefined => {
-        const native = e?.nativeEvent ?? e;
-        const x = native?.clientX ?? native?.pageX;
-        const y = native?.clientY ?? native?.pageY;
-        if (typeof x === "number" && typeof y === "number") return {x, y};
-        return undefined;
-    };
-
-    return (
-        <Text style={style}>
-            {segments.map((seg, idx) => {
-                if (seg.type === "text" || !seg.entry) {
-                    return <Text key={idx}>{seg.content}</Text>;
-                }
-
-                const entry = seg.entry;
-                const webHoverProps =
-                    Platform.OS === "web" && isDesktop
-                        ? {
-                            onMouseEnter: (e: any) =>
-                                onSelectGlossary(entry, extractAnchorFromEvent(e)),
-                            onMouseLeave: () => onLeaveGlossary(),
-                        }
-                        : {};
-
-                return (
-                    <Text
-                        key={idx}
-                        onPress={(e: any) =>
-                            onSelectGlossary(entry, extractAnchorFromEvent(e))
-                        }
-                        style={styles.glossaryInlineTerm}
-                        {...(webHoverProps as any)}
-                    >
-                        {seg.content}
-                    </Text>
-                );
-            })}
-        </Text>
-    );
-}
-
 const styles = StyleSheet.create({
     root: {
         flex: 1,
@@ -1057,6 +1044,13 @@ const styles = StyleSheet.create({
     fullBleedLayer: {
         ...StyleSheet.absoluteFill,
     },
+    fullImageTrackContainer: {
+        ...StyleSheet.absoluteFill,
+        backgroundColor: Colors.bgPrimary,
+        overflow: "hidden",
+        borderTopWidth: 1,
+        borderTopColor: Colors.borderSubtle,
+    },
     fullBleedImage: {
         width: "100%",
         height: "100%",
@@ -1083,32 +1077,35 @@ const styles = StyleSheet.create({
     hudTitleGroup: {
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
         gap: Spacing.xs + 2,
-        flexShrink: 1,
+        flex: 1,
         paddingHorizontal: Spacing.sm,
+    },
+    hudTitleGroupMobile: {
+        flexDirection: "column",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        gap: 1,
+        paddingRight: 0,
     },
     hudCodeText: {
         ...Typography.badge,
         color: Colors.accentPrimary,
     },
-    hudDot: {
-        color: Colors.textMuted,
-    },
     hudSectionTitle: {
         ...Typography.bodySmall,
         color: Colors.textSecondary,
+        flexShrink: 1,
     },
-    hudStepBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: Radii.sm,
-        backgroundColor: Colors.bgSurface,
-        borderWidth: 1,
-        borderColor: Colors.borderSubtle,
+    hudSectionTitleMobile: {
+        color: Colors.textPrimary,
+        fontFamily: Typography.bodySemiBold.fontFamily,
+        fontSize: 13,
+        lineHeight: 17,
     },
-    hudStepBadgeText: {
-        ...Typography.coordinate,
-        color: Colors.textSecondary,
+    hudRightBalanceSpacer: {
+        width: 72,
     },
     progressTrack: {
         height: 2,
@@ -1265,7 +1262,6 @@ const styles = StyleSheet.create({
     },
     splitImageFrame: {
         width: "100%",
-        aspectRatio: 4 / 3,
         borderRadius: Radii.md,
         overflow: "hidden",
         backgroundColor: Colors.bgSurface,
@@ -1415,15 +1411,6 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         lineHeight: 26,
     },
-    glossaryInlineTerm: {
-        color: Colors.accentPrimaryHover,
-        fontFamily: Typography.bodySemiBold.fontFamily,
-        textDecorationLine: "underline",
-        textDecorationStyle: "dotted",
-        textDecorationColor: Colors.accentPrimary,
-        ...Platform.select({web: {cursor: "pointer" as any}}),
-    },
-
     footerSlide: {
         width: "100%",
         backgroundColor: Colors.bgPrimary,
