@@ -25,6 +25,13 @@ export interface CameraPose {
     focusY: number;  // -0.5 (topo) até 0.5 (base), 0 = centro
 }
 
+export interface DeviceCameraPose {
+    desktop: CameraPose;
+    mobile?: Partial<CameraPose>;
+}
+
+export type CameraConfig = CameraPose | DeviceCameraPose;
+
 export type StepLayout = 'full-image' | 'split' | 'text-only'
 
 export interface StoryStep {
@@ -36,7 +43,7 @@ export interface StoryStep {
     text: string;
     image?: ImageSourcePropType | { uri: string };
     imageCaption?: string;
-    camera?: CameraPose;
+    camera?: CameraConfig;
     imagePosition?: 'left' | 'right';
     imageFit?: 'contain' | 'cover';
     imageAspectRatio?: number;
@@ -64,7 +71,18 @@ export const SECOES: Record<string, SectionData> = {
                 id: '1.1',
                 layout: 'full-image',
                 image: require('@/assets/images/cifra_cesar.svg'),
-                camera: {scale: 1.3, focusX: -0.5, focusY: 0},
+                camera: {
+                    desktop: {
+                        scale: 1.3,
+                        focusX: -0.5,
+                        focusY: 0
+                    },
+                    mobile: {
+                        scale: 2.4,
+                        focusX: -0.45,
+                        focusY: 0
+                    }
+                },
                 text: 'Na cifra usada por César, cada letra avançava três casas no alfabeto: "A" se tornava "D", "B" se tornava "E", e assim por diante.',
                 isBrazil: false
             },
@@ -160,7 +178,18 @@ export const SECOES: Record<string, SectionData> = {
                 id: '3.2',
                 layout: "full-image",
                 image: {uri: 'https://www.christies.com/-/jssmedia/images/features/articles/2024/12/guide-updates/collecting-guide-enigma-machines/enigma-machine-main.jpg?mw=2301&mh=1438&hash=74ef0fa22b03037c1dd064220fe5a81ed3355d57'},
-                camera: {scale: 1.6, focusX: 0.1, focusY: -0.1},
+                camera: {
+                    desktop: {
+                        scale: 1.6,
+                        focusX: 0.1,
+                        focusY: -0.1
+                    },
+                    mobile: {
+                        scale: 3.5,
+                        focusX: 0,
+                        focusY: 0
+                    }
+                },
                 text: 'No início, acreditava-se que era impossível descriptografar uma mensagem criada pela Enigma, já que a chave mudava todos os dias: dependia da escolha e da posição inicial dos rotores e das conexões de cabos da máquina, o que gerava quatrilhões de combinações possíveis.',
                 isBrazil: false,
             },
@@ -200,7 +229,18 @@ export const SECOES: Record<string, SectionData> = {
                 id: '4.1',
                 layout: 'full-image',
                 image: require('@/assets/images/mapa-bolivar.jpg'),
-                camera: {scale: 1.5, focusX: 0.5, focusY: -0.5},
+                camera: {
+                    desktop: {
+                        scale: 1.5,
+                        focusX: 0.5,
+                        focusY: -0.5
+                    },
+                    mobile: {
+                        scale: 3.7,
+                        focusX: 0.45,
+                        focusY: 0
+                    }
+                },
                 year: '1944',
                 text: 'Com apoio de [[radiogoniometria|radiogoniometria]] e serviços aliados, a polícia brasileira rastreou as ondas de rádio clandestinas e desfez os núcleos de espionagem. Na operação, transmissores, manuais de cifragens e tabelas de códigos numéricos foram apreendidos.',
                 isBrazil: true,
@@ -265,6 +305,10 @@ export const SECOES: Record<string, SectionData> = {
             {
                 label: 'The untold story of Tommy and his team — Tommy Flowers Foundation',
                 url: 'https://tommyflowers.org/the-untold-story-of-tommy-and-his-team/'
+            },
+            {
+                label: '75 years since Colossus arrived at Bletchley',
+                url: 'https://www.bletchleypark.org.uk/our-story/75-years-since-colossus-arrived-at-bletchley/'
             },
             {
                 label: 'The Alan Turing Internet Scrapbook',

@@ -23,7 +23,6 @@ import {
     Home,
     ImageIcon,
     Info,
-    MapPin,
 } from "lucide-react-native";
 import {Colors, Layout, Radii, Shadows, Spacing, Typography} from "@/constants/theme";
 import {useResponsive} from "@/hooks/use-responsive";
@@ -31,7 +30,52 @@ import {SECOES, SectionData, SectionSource, StoryStep} from "@/data/museum-secti
 import {GlossaryEntry} from "@/data/glossary";
 import {ActiveGlossaryState, GlossaryOverlay, RichGlossaryText} from "@/components/glossary-overlay";
 import {scheduleOnRN} from "react-native-worklets";
-import Svg, {Defs, LinearGradient, Rect, Stop} from "react-native-svg";
+import Svg, {Circle, Defs, LinearGradient, Polygon, Rect, Stop} from "react-native-svg";
+
+function BrazilFlagIcon({size = 22}: { size?: number }) {
+    const height = Math.round(size * 0.7);
+    return (
+        <Svg width={size} height={height} viewBox="0 0 22 15">
+            <Rect x="0.5" y="0.5" width="21" height="14" rx="2.5" fill="#1F5C3A" stroke="#C89B3C" strokeWidth="1"/>
+            <Polygon points="11,2.3 18.8,7.5 11,12.7 3.2,7.5" fill="#D8A944"/>
+            <Circle cx="11" cy="7.5" r="2.7" fill="#1C355E"/>
+        </Svg>
+    );
+}
+
+function resolveCameraPose(
+    camera: StoryStep["camera"],
+    isDesktop: boolean
+): { scale: number; focusX: number; focusY: number; hasExplicitMobileScale: boolean } {
+    if (!camera) {
+        return {scale: 1, focusX: 0, focusY: 0, hasExplicitMobileScale: false};
+    }
+
+    if ("desktop" in camera) {
+        const base = camera.desktop;
+        if (isDesktop || !camera.mobile) {
+            return {
+                scale: base.scale ?? 1,
+                focusX: base.focusX ?? 0,
+                focusY: base.focusY ?? 0,
+                hasExplicitMobileScale: false,
+            };
+        }
+        return {
+            scale: camera.mobile.scale ?? base.scale ?? 1,
+            focusX: camera.mobile.focusX ?? base.focusX ?? 0,
+            focusY: camera.mobile.focusY ?? base.focusY ?? 0,
+            hasExplicitMobileScale: camera.mobile.scale !== undefined,
+        };
+    }
+
+    return {
+        scale: camera.scale ?? 1,
+        focusX: camera.focusX ?? 0,
+        focusY: camera.focusY ?? 0,
+        hasExplicitMobileScale: false,
+    };
+}
 
 function hasValidImage(image?: ImageSourcePropType | { uri: string }): boolean {
     if (!image) return false;
@@ -150,6 +194,7 @@ export function ScrollytellingStage({
                 scale: number;
                 focusX: number;
                 focusY: number;
+                hasExplicitMobileScale: boolean;
             }>;
         }> = [];
 
@@ -162,12 +207,14 @@ export function ScrollytellingStage({
                 ((step.sequenceId && prevStep.sequenceId === step.sequenceId) ||
                     JSON.stringify(prevStep.image) === JSON.stringify(step.image));
 
+            const resolved = resolveCameraPose(step.camera, isDesktop);
             const pose = {
                 pageIndex,
                 image: step.image,
-                scale: step.camera?.scale ?? 1,
-                focusX: step.camera?.focusX ?? 0,
-                focusY: step.camera?.focusY ?? 0,
+                scale: resolved.scale,
+                focusX: resolved.focusX,
+                focusY: resolved.focusY,
+                hasExplicitMobileScale: resolved.hasExplicitMobileScale,
             };
 
             if (sameTrackAsPrev && tracks.length > 0) {
@@ -184,7 +231,7 @@ export function ScrollytellingStage({
         });
 
         return tracks;
-    }, [section.steps, coverPagesCount]);
+    }, [section.steps, coverPagesCount, isDesktop]);
 
     const {splitTracks, splitStepMeta} = useMemo(() => {
         const tracks: Array<{
@@ -223,15 +270,16 @@ export function ScrollytellingStage({
                 ((step.sequenceId && prevStep.sequenceId === step.sequenceId) ||
                     JSON.stringify(prevStep.image) === JSON.stringify(step.image));
 
+            const resolved = resolveCameraPose(step.camera, isDesktop);
             const keyframe = {
                 pageIndex,
                 stepId: step.id,
                 image: step.image,
                 imageCaption: step.imageCaption,
                 title: step.title,
-                scale: step.camera?.scale ?? 1,
-                focusX: step.camera?.focusX ?? 0,
-                focusY: step.camera?.focusY ?? 0,
+                scale: resolved.scale,
+                focusX: resolved.focusX,
+                focusY: resolved.focusY,
             };
 
             if (sameTrackAsPrev && tracks.length > 0) {
@@ -259,7 +307,7 @@ export function ScrollytellingStage({
         });
 
         return {splitTracks: tracks, splitStepMeta: metaMap};
-    }, [section.steps, coverPagesCount]);
+    }, [section.steps, coverPagesCount, isDesktop]);
 
     const handleOpenGlossary = (entry: GlossaryEntry, anchor?: { x: number; y: number }) => {
         if (hoverCloseTimeout.current) {
@@ -698,6 +746,7 @@ function FullImageTrackLayer({
             scale: number;
             focusX: number;
             focusY: number;
+            hasExplicitMobileScale: boolean;
         }>;
     };
     pageHeight: number;
@@ -768,17 +817,15 @@ function FullImageTrackLayer({
 
     const animatedImageStyle = useAnimatedStyle(() => {
         const idx = activeKeyframeIndex.value;
-        const rawScale = scaleOutputRange[idx];
+        const targetScale = scaleOutputRange[idx];
         const targetFocusX = focusXOutputRange[idx];
         const targetFocusY = focusYOutputRange[idx];
-        const mobileZoomBoost = !isDesktop && rawScale > 1.05 ? rawScale * 1.85 : rawScale;
-        const targetScale = isDesktop ? rawScale : mobileZoomBoost;
 
         const effectiveRefHeight = isDesktop ? stageHeight : stageWidth * 0.65;
         const maxOffsetX = stageWidth * (targetScale - 1) * 0.5;
         const maxOffsetY = effectiveRefHeight * (targetScale - 1) * 0.5;
         const targetTranslateX = -targetFocusX * 2 * maxOffsetX;
-        const mobileRestYOffset = !isDesktop && rawScale <= 1.05 ? -stageHeight * 0.06 : 0;
+        const mobileRestYOffset = !isDesktop && targetScale <= 1.05 ? -stageHeight * 0.06 : 0;
         const targetTranslateY = -targetFocusY * 2 * maxOffsetY + mobileRestYOffset;
 
         const timingConfig = {
@@ -1142,7 +1189,6 @@ function SplitStorySlide({
     onLeaveGlossary: () => void;
 }) {
     const imageOnLeft = step.imagePosition === "left";
-    const isSequence = (sequenceMeta?.totalInTrack ?? 1) > 1;
     const isFirstInTrack = (sequenceMeta?.stepIndexInTrack ?? 0) === 0;
     const isLastInTrack =
         sequenceMeta
@@ -1150,23 +1196,21 @@ function SplitStorySlide({
             : true;
 
     const textBody = (
-        <View style={styles.splitTextInner}>
-            {(step.year || step.isBrazil || isSequence) && (
+        <View style={[styles.splitTextInner, step.isBrazil && styles.brazilHighlightBorder]}>
+            {(step.year || (!step.title && step.isBrazil)) && (
                 <View style={styles.metaBadgeRow}>
                     {step.year && <Text style={styles.stepYearText}>{step.year}</Text>}
-                    {step.isBrazil && (
-                        <View style={styles.brazilBadge}>
-                            <MapPin size={11} color={Colors.accentBrazil}/>
-                            <Text style={styles.brazilBadgeText}>MARCO BRASIL</Text>
-                        </View>
-                    )}
+                    {!step.title && step.isBrazil && <BrazilFlagIcon size={20}/>}
                 </View>
             )}
 
             {step.title && (
-                <Text style={[styles.stepHeading, !isDesktop && {fontSize: 24, lineHeight: 30}]}>
-                    {step.title}
-                </Text>
+                <View style={styles.headingWithFlagRow}>
+                    <Text style={[styles.stepHeadingInline, !isDesktop && {fontSize: 24, lineHeight: 30}]}>
+                        {step.title}
+                    </Text>
+                    {step.isBrazil && <BrazilFlagIcon size={22}/>}
+                </View>
             )}
 
             <RichGlossaryText
@@ -1291,22 +1335,20 @@ function TextOnlyStorySlide({
                         step.isBrazil && styles.brazilHighlightBorder,
                     ]}
                 >
-                    {(step.year || step.isBrazil) && (
+                    {(step.year || (!step.title && step.isBrazil)) && (
                         <View style={styles.metaBadgeRow}>
                             {step.year && <Text style={styles.stepYearText}>{step.year}</Text>}
-                            {step.isBrazil && (
-                                <View style={styles.brazilBadge}>
-                                    <MapPin size={11} color={Colors.accentBrazil}/>
-                                    <Text style={styles.brazilBadgeText}>MARCO BRASIL</Text>
-                                </View>
-                            )}
+                            {!step.title && step.isBrazil && <BrazilFlagIcon size={20}/>}
                         </View>
                     )}
 
                     {step.title && (
-                        <Text style={[styles.stepHeading, !isDesktop && {fontSize: 24, lineHeight: 30}]}>
-                            {step.title}
-                        </Text>
+                        <View style={styles.headingWithFlagRow}>
+                            <Text style={[styles.stepHeadingInline, !isDesktop && {fontSize: 24, lineHeight: 30}]}>
+                                {step.title}
+                            </Text>
+                            {step.isBrazil && <BrazilFlagIcon size={22}/>}
+                        </View>
                     )}
 
                     <RichGlossaryText
@@ -1356,6 +1398,7 @@ function FullImageOverlaySlide({
                         <Text style={styles.fullImageCreditText} numberOfLines={1}>
                             {step.imageCaption ?? step.title}
                         </Text>
+                        {step.isBrazil && <BrazilFlagIcon size={18}/>}
                     </View>
                 )}
             </View>
@@ -1379,12 +1422,7 @@ function FullImageOverlaySlide({
                         {(step.year || step.isBrazil) && (
                             <View style={styles.metaBadgeRow}>
                                 {step.year && <Text style={styles.stepYearText}>{step.year}</Text>}
-                                {step.isBrazil && (
-                                    <View style={styles.brazilBadge}>
-                                        <MapPin size={11} color={Colors.accentBrazil}/>
-                                        <Text style={styles.brazilBadgeText}>MARCO BRASIL</Text>
-                                    </View>
-                                )}
+                                {step.isBrazil && <BrazilFlagIcon size={20}/>}
                             </View>
                         )}
 
@@ -1450,7 +1488,8 @@ function SectionFooterSlide({
     );
 
     const handleOpenUrl = (url: string) => {
-        Linking.openURL(url).catch(() => {});
+        Linking.openURL(url).catch(() => {
+        });
     };
 
     const nextBanner = nextSection ? (
@@ -1594,7 +1633,7 @@ function SectionFooterSlide({
                             <View style={styles.footerSourcesToggleLeft}>
                                 <BookOpen size={14} color={Colors.accentPrimary}/>
                                 <Text style={styles.footerSourcesToggleText}>
-                                    FONTES & REFERÊNCIAS DESTA SEÇÃO ({normalizedSources.length})
+                                    FONTES DESTA SEÇÃO ({normalizedSources.length})
                                 </Text>
                             </View>
                             {sourcesExpanded ? (
@@ -2065,25 +2104,22 @@ const styles = StyleSheet.create({
         ...Typography.coordinate,
         color: Colors.accentPrimary,
     },
-    brazilBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        backgroundColor: Colors.accentBrazilMuted,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: Radii.sm,
-        borderWidth: 1,
-        borderColor: Colors.accentBrazil,
-    },
-    brazilBadgeText: {
-        ...Typography.badge,
-        color: Colors.accentBrazil,
-    },
     brazilHighlightBorder: {
         borderLeftWidth: 3,
         borderLeftColor: Colors.accentBrazil,
         paddingLeft: Spacing.md,
+    },
+    headingWithFlagRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 10,
+        marginBottom: Spacing.md,
+    },
+    stepHeadingInline: {
+        ...Typography.h1,
+        color: Colors.textPrimary,
+        flexShrink: 1,
     },
     stepHeading: {
         ...Typography.h1,
