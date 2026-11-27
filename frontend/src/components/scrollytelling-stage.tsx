@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {ImageSourcePropType, Platform, Pressable, ScrollView, StyleSheet, Text, View,} from "react-native";
+import {ImageSourcePropType, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View,} from "react-native";
 import {Image} from "expo-image";
 import Animated, {
     Easing,
@@ -13,10 +13,21 @@ import Animated, {
     useSharedValue,
     withTiming,
 } from "react-native-reanimated";
-import {ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Home, ImageIcon, Info, MapPin,} from "lucide-react-native";
+import {
+    ArrowLeft,
+    ArrowRight,
+    BookOpen,
+    ChevronDown,
+    ChevronUp,
+    ExternalLink,
+    Home,
+    ImageIcon,
+    Info,
+    MapPin,
+} from "lucide-react-native";
 import {Colors, Layout, Radii, Shadows, Spacing, Typography} from "@/constants/theme";
 import {useResponsive} from "@/hooks/use-responsive";
-import {SECOES, SectionData, StoryStep} from "@/data/museum-section";
+import {SECOES, SectionData, SectionSource, StoryStep} from "@/data/museum-section";
 import {GlossaryEntry} from "@/data/glossary";
 import {ActiveGlossaryState, GlossaryOverlay, RichGlossaryText} from "@/components/glossary-overlay";
 import {scheduleOnRN} from "react-native-worklets";
@@ -411,6 +422,7 @@ export function ScrollytellingStage({
 
                     <SectionFooterSlide
                         isDesktop={isDesktop}
+                        sources={section.sources}
                         nextSectionId={nextSectionId}
                         prevSectionId={prevSectionId}
                         onBackHome={onBackHome}
@@ -1393,24 +1405,53 @@ function FullImageOverlaySlide({
     );
 }
 
+function normalizeSource(source: SectionSource): { label: string; url: string; domain: string } {
+    const rawUrl = typeof source === "string" ? source : source.url;
+    let domain: string;
+    try {
+        const parsed = new URL(rawUrl);
+        domain = parsed.hostname.replace(/^www\./, "");
+    } catch {
+        domain = rawUrl;
+    }
+
+    const customLabel = typeof source === "object" && source.label ? source.label.trim() : "";
+    return {
+        label: customLabel || domain,
+        url: rawUrl,
+        domain,
+    };
+}
+
 /**
  * Rodapé de fechamento da era
  */
 function SectionFooterSlide({
                                 isDesktop,
+                                sources,
                                 nextSectionId,
                                 prevSectionId,
                                 onBackHome,
                                 onSelectSection,
                             }: {
     isDesktop: boolean;
+    sources?: SectionSource[];
     nextSectionId: SectionData["sectionId"] | null;
     prevSectionId: SectionData["sectionId"] | null;
     onBackHome: () => void;
     onSelectSection?: (id: SectionData["sectionId"]) => void;
 }) {
+    const [sourcesExpanded, setSourcesExpanded] = useState(false);
     const nextSection = nextSectionId ? SECOES[nextSectionId] : null;
     const prevSection = prevSectionId ? SECOES[prevSectionId] : null;
+    const normalizedSources = useMemo(
+        () => (sources ?? []).map(normalizeSource),
+        [sources]
+    );
+
+    const handleOpenUrl = (url: string) => {
+        Linking.openURL(url).catch(() => {});
+    };
 
     const nextBanner = nextSection ? (
         <View style={styles.footerNextFeatureCard}>
@@ -1535,6 +1576,65 @@ function SectionFooterSlide({
                                 </Pressable>
                             )}
                         </View>
+                    </View>
+                )}
+
+                {normalizedSources.length > 0 && (
+                    <View style={styles.footerSourcesSection}>
+                        <Pressable
+                            onPress={() => setSourcesExpanded((prev) => !prev)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Alternar exibição de fontes e referências desta seção"
+                            style={({hovered, pressed}: any) => [
+                                styles.footerSourcesToggleBtn,
+                                hovered && styles.footerSourcesToggleBtnHover,
+                                pressed && {opacity: 0.85},
+                            ]}
+                        >
+                            <View style={styles.footerSourcesToggleLeft}>
+                                <BookOpen size={14} color={Colors.accentPrimary}/>
+                                <Text style={styles.footerSourcesToggleText}>
+                                    FONTES & REFERÊNCIAS DESTA SEÇÃO ({normalizedSources.length})
+                                </Text>
+                            </View>
+                            {sourcesExpanded ? (
+                                <ChevronUp size={15} color={Colors.textSecondary}/>
+                            ) : (
+                                <ChevronDown size={15} color={Colors.textSecondary}/>
+                            )}
+                        </Pressable>
+
+                        {sourcesExpanded && (
+                            <View style={styles.footerSourcesList}>
+                                {normalizedSources.map((item, idx) => {
+                                    const indexCode = String(idx + 1).padStart(2, "0");
+                                    return (
+                                        <Pressable
+                                            key={`${item.url}-${idx}`}
+                                            onPress={() => handleOpenUrl(item.url)}
+                                            accessibilityRole="link"
+                                            accessibilityLabel={`Abrir fonte ${item.label}`}
+                                            style={({hovered, pressed}: any) => [
+                                                styles.footerSourceItem,
+                                                hovered && styles.footerSourceItemHover,
+                                                pressed && {opacity: 0.8},
+                                            ]}
+                                        >
+                                            <Text style={styles.footerSourceIndex}>[{indexCode}]</Text>
+                                            <View style={styles.footerSourceTextCol}>
+                                                <Text style={styles.footerSourceLabel} numberOfLines={1}>
+                                                    {item.label}
+                                                </Text>
+                                                <Text style={styles.footerSourceUrl} numberOfLines={1}>
+                                                    {item.url}
+                                                </Text>
+                                            </View>
+                                            <ExternalLink size={14} color={Colors.textSecondary}/>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        )}
                     </View>
                 )}
             </View>
@@ -2129,5 +2229,76 @@ const styles = StyleSheet.create({
     footerNextTitleMobile: {
         fontSize: 19,
         lineHeight: 25,
+    },
+    footerSourcesSection: {
+        marginTop: Spacing.md,
+        width: "100%",
+    },
+    footerSourcesToggleBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 10,
+        paddingHorizontal: Spacing.md,
+        borderRadius: Radii.sm,
+        backgroundColor: Colors.bgSurface,
+        borderWidth: 1,
+        borderColor: Colors.borderSubtle,
+        ...Platform.select({web: {cursor: "pointer" as any}}),
+    },
+    footerSourcesToggleBtnHover: {
+        borderColor: Colors.borderStrong,
+        backgroundColor: Colors.bgElevated,
+    },
+    footerSourcesToggleLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.xs + 2,
+    },
+    footerSourcesToggleText: {
+        ...Typography.badge,
+        color: Colors.textSecondary,
+    },
+    footerSourcesList: {
+        marginTop: Spacing.xs,
+        borderRadius: Radii.sm,
+        backgroundColor: Colors.bgSurface,
+        borderWidth: 1,
+        borderColor: Colors.borderSubtle,
+        overflow: "hidden",
+    },
+    footerSourceItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.sm,
+        paddingVertical: 10,
+        paddingHorizontal: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.borderSubtle,
+        ...Platform.select({web: {cursor: "pointer" as any}}),
+    },
+    footerSourceItemHover: {
+        backgroundColor: Colors.bgElevated,
+    },
+    footerSourceIndex: {
+        ...Typography.coordinate,
+        fontSize: 12,
+        color: Colors.accentPrimary,
+    },
+    footerSourceTextCol: {
+        flex: 1,
+        gap: 1,
+    },
+    footerSourceLabel: {
+        ...Typography.bodySemiBold,
+        fontSize: 13,
+        lineHeight: 18,
+        color: Colors.textPrimary,
+    },
+    footerSourceUrl: {
+        ...Typography.bodySmall,
+        fontSize: 11,
+        lineHeight: 15,
+        color: Colors.textMuted,
     },
 });

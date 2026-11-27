@@ -1,5 +1,12 @@
 import {ImageSourcePropType} from "react-native";
 
+export type SectionSource =
+    | string
+    | {
+    label?: string;
+    url: string;
+};
+
 export interface SectionData {
     sectionId: '1' | '2' | '3' | '4' | '5';
     code: string;
@@ -9,6 +16,7 @@ export interface SectionData {
     extraText?: string;
     coverImage?: ImageSourcePropType | { uri: string };
     steps: StoryStep[];
+    sources?: SectionSource[];
 }
 
 export interface CameraPose {
@@ -216,7 +224,57 @@ export const SECOES: Record<string, SectionData> = {
                 text: 'Após a guerra, em 1949, [[claude-shannon|Claude Shannon]], inspirado pelas máquinas criadas para quebrar os códigos e por encontros com [[alan-turing|Alan Turing]], publicou o artigo "Communication Theory of Secrecy Systems", que fundou a criptografia moderna, e a transformou em um ramo da matemática.',
                 isBrazil: false,
             },
-        ]
+        ],
+        sources: [
+            {
+                label: 'Uma breve história da criptografia — Red Hat',
+                url: 'https://www.redhat.com/pt-br/blog/brief-history-cryptography'
+            },
+            {
+                label: 'Cifra de Vigenère — Wikipédia',
+                url: 'https://pt.wikipedia.org/wiki/Cifra_de_Vigen%C3%A8re',
+            },
+            {
+                label: 'Vigenère-Chiffre — Wikipédia',
+                url: 'https://de.wikipedia.org/wiki/Vigen%C3%A8re-Chiffre'
+            },
+            {
+                label: 'Enigma Machine — Wikipédia',
+                url: 'https://en.wikipedia.org/wiki/Enigma_machine'
+            },
+            {
+                label: 'Enigma Maschine — Wikipédia',
+                url: 'https://de.wikipedia.org/wiki/Enigma_(Maschine)'
+            },
+            {
+                label: 'Marian Rejewski — Wikipédia',
+                url: 'https://en.wikipedia.org/wiki/Marian_Rejewski'
+            },
+            {
+                label: 'Bomba (cryptography) — Wikipédia',
+                url: 'https://en.wikipedia.org/wiki/Bomba_(cryptography)'
+            },
+            {
+                label: 'Bombe — Wikipédia',
+                url: 'https://en.wikipedia.org/wiki/Bombe'
+            },
+            {
+                label: 'Tunny and Heath Robinson — The National Museum of Computing',
+                url: 'https://www.tnmoc.org/tunny-heath-robinson'
+            },
+            {
+                label: 'The untold story of Tommy and his team — Tommy Flowers Foundation',
+                url: 'https://tommyflowers.org/the-untold-story-of-tommy-and-his-team/'
+            },
+            {
+                label: 'The Alan Turing Internet Scrapbook',
+                url: 'https://www.turing.org.uk/scrapbook/ukusa.html'
+            },
+            {
+                label: 'Os espiões nazistas que agiam no Brasil durante a Segunda Guerra — Aventuras na História',
+                url: 'https://aventurasnahistoria.com.br/noticias/desventuras/os-espioes-nazistas-que-agiam-no-brasil-durante-a-segunda-guerra.phtml'
+            },
+        ],
     },
     '2': {
         sectionId: '2',
