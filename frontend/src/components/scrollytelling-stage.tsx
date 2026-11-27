@@ -13,10 +13,10 @@ import Animated, {
     useSharedValue,
     withTiming,
 } from "react-native-reanimated";
-import {ArrowLeft, ArrowRight, ChevronDown, ChevronUp, ImageIcon, Info, MapPin,} from "lucide-react-native";
+import {ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Home, ImageIcon, Info, MapPin,} from "lucide-react-native";
 import {Colors, Layout, Radii, Shadows, Spacing, Typography} from "@/constants/theme";
 import {useResponsive} from "@/hooks/use-responsive";
-import {SectionData, StoryStep} from "@/data/museum-section";
+import {SECOES, SectionData, StoryStep} from "@/data/museum-section";
 import {GlossaryEntry} from "@/data/glossary";
 import {ActiveGlossaryState, GlossaryOverlay, RichGlossaryText} from "@/components/glossary-overlay";
 import {scheduleOnRN} from "react-native-worklets";
@@ -410,8 +410,7 @@ export function ScrollytellingStage({
                     })}
 
                     <SectionFooterSlide
-                        section={section}
-                        pageHeight={stageHeight}
+                        isDesktop={isDesktop}
                         nextSectionId={nextSectionId}
                         prevSectionId={prevSectionId}
                         onBackHome={onBackHome}
@@ -1153,14 +1152,17 @@ function SplitStorySlide({
             )}
 
             {step.title && (
-                <Text style={[styles.stepHeading, !isDesktop && {fontSize: 22, lineHeight: 28}]}>
+                <Text style={[styles.stepHeading, !isDesktop && {fontSize: 24, lineHeight: 30}]}>
                     {step.title}
                 </Text>
             )}
 
             <RichGlossaryText
                 text={step.text}
-                style={[styles.editorialBodyText, !isDesktop && {fontSize: 15, lineHeight: 23}]}
+                style={[
+                    styles.editorialBodyText,
+                    isDesktop ? {fontSize: 18, lineHeight: 30} : {fontSize: 16, lineHeight: 25},
+                ]}
                 isDesktop={isDesktop}
                 onSelectGlossary={onOpenGlossary}
                 onLeaveGlossary={onLeaveGlossary}
@@ -1395,74 +1397,146 @@ function FullImageOverlaySlide({
  * Rodapé de fechamento da era
  */
 function SectionFooterSlide({
-                                section,
-                                pageHeight,
+                                isDesktop,
                                 nextSectionId,
                                 prevSectionId,
                                 onBackHome,
                                 onSelectSection,
                             }: {
-    section: SectionData;
-    pageHeight: number;
+    isDesktop: boolean;
     nextSectionId: SectionData["sectionId"] | null;
     prevSectionId: SectionData["sectionId"] | null;
     onBackHome: () => void;
     onSelectSection?: (id: SectionData["sectionId"]) => void;
 }) {
-    return (
-        <View style={[styles.footerSlide, {height: pageHeight}]}>
-            <View style={styles.footerCard}>
-                <Text style={styles.footerBadge}>FIM DA {section.code}</Text>
-                <Text style={styles.footerTitle}>{section.title}</Text>
-                <Text style={styles.footerSubtitle}>
-                    Continue sua jornada cronológica ou escolha outra estação do acervo.
-                </Text>
+    const nextSection = nextSectionId ? SECOES[nextSectionId] : null;
+    const prevSection = prevSectionId ? SECOES[prevSectionId] : null;
 
-                <View style={styles.footerActionsRow}>
-                    {prevSectionId && onSelectSection && (
+    const nextBanner = nextSection ? (
+        <View style={styles.footerNextFeatureCard}>
+            <View style={styles.footerNextTextCol}>
+                <View style={styles.footerNextKickerRow}>
+                    <Text style={styles.footerNextKicker}>PRÓXIMA PARADA</Text>
+                    {nextSection.period ? (
+                        <Text style={styles.footerNextPeriod}>
+                            • {nextSection.period}
+                        </Text>
+                    ) : null}
+                </View>
+                <Text
+                    style={[
+                        styles.footerNextTitle,
+                        !isDesktop && styles.footerNextTitleMobile,
+                    ]}
+                >
+                    {nextSection.code}: {nextSection.title}
+                </Text>
+            </View>
+        </View>
+    ) : (
+        <View style={styles.footerNextFeatureCard}>
+            <View style={styles.footerNextTextCol}>
+                <Text style={styles.footerNextKicker}>JORNADA CONCLUÍDA</Text>
+                <Text
+                    style={[
+                        styles.footerNextTitle,
+                        !isDesktop && styles.footerNextTitleMobile,
+                    ]}
+                >
+                    Você percorreu todas as eras do acervo
+                </Text>
+            </View>
+        </View>
+    );
+
+    return (
+        <View style={[styles.footerSlide, !isDesktop && styles.footerSlideMobile]}>
+            <View style={styles.footerContainer}>
+                {isDesktop ? (
+                    <View style={styles.footerDesktopRow}>
                         <Pressable
-                            onPress={() => onSelectSection(prevSectionId)}
+                            onPress={onBackHome}
+                            accessibilityRole="button"
+                            accessibilityLabel="Voltar para o início"
                             style={({hovered, pressed}: any) => [
-                                styles.footerSecondaryBtn,
-                                hovered && {borderColor: Colors.accentPrimary},
+                                styles.footerDesktopIconBtn,
+                                hovered && styles.footerDesktopIconBtnHover,
                                 pressed && {opacity: 0.8},
                             ]}
                         >
-                            <ArrowLeft size={16} color={Colors.textPrimary}/>
-                            <Text style={styles.footerSecondaryBtnText}>
-                                Seção 0{prevSectionId}
-                            </Text>
+                            <Home size={20} color={Colors.textPrimary}/>
                         </Pressable>
-                    )}
 
-                    {nextSectionId && onSelectSection && (
-                        <Pressable
-                            onPress={() => onSelectSection(nextSectionId)}
-                            style={({hovered, pressed}: any) => [
-                                styles.footerPrimaryBtn,
-                                hovered && {backgroundColor: Colors.accentPrimaryHover},
-                                pressed && {opacity: 0.9},
-                            ]}
-                        >
-                            <Text style={styles.footerPrimaryBtnText}>
-                                Avançar para Seção 0{nextSectionId}
-                            </Text>
-                            <ArrowRight size={16} color={Colors.textInverse}/>
-                        </Pressable>
-                    )}
-                </View>
+                        {nextBanner}
 
-                <Pressable
-                    onPress={onBackHome}
-                    style={({pressed}: any) => [
-                        styles.footerHomeLink,
-                        pressed && {opacity: 0.7},
-                    ]}
-                >
-                    <Text style={styles.footerHomeLinkText}>
-                        Voltar ao Mapa Geral de Seções
-                    </Text>
-                </Pressable>
+                        {nextSection && onSelectSection && (
+                            <Pressable
+                                onPress={() => onSelectSection(nextSection.sectionId)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Avançar para ${nextSection.code}`}
+                                style={({hovered, pressed}: any) => [
+                                    styles.footerDesktopNextIconBtn,
+                                    hovered && styles.footerDesktopNextIconBtnHover,
+                                    pressed && {opacity: 0.9},
+                                ]}
+                            >
+                                <ArrowRight size={22} color={Colors.textInverse}/>
+                            </Pressable>
+                        )}
+                    </View>
+                ) : (
+                    <View style={styles.footerMobileCol}>
+                        {nextBanner}
+
+                        <View style={styles.footerMobileSecondaryRow}>
+                            <Pressable
+                                onPress={onBackHome}
+                                style={({hovered, pressed}: any) => [
+                                    styles.footerMobileActionBtn,
+                                    hovered && {borderColor: Colors.accentPrimary},
+                                    pressed && {opacity: 0.8},
+                                ]}
+                            >
+                                <Home size={16} color={Colors.textSecondary}/>
+                                <Text style={styles.footerMobileActionText} numberOfLines={1}>
+                                    Início
+                                </Text>
+                            </Pressable>
+
+                            {prevSection && onSelectSection && (
+                                <Pressable
+                                    onPress={() => onSelectSection(prevSection.sectionId)}
+                                    style={({hovered, pressed}: any) => [
+                                        styles.footerMobileActionBtn,
+                                        hovered && {borderColor: Colors.accentPrimary},
+                                        pressed && {opacity: 0.8},
+                                    ]}
+                                >
+                                    <ArrowLeft size={16} color={Colors.textSecondary}/>
+                                    <Text style={styles.footerMobileActionText} numberOfLines={1}>
+                                        {prevSection.code}
+                                    </Text>
+                                </Pressable>
+                            )}
+
+                            {nextSection && onSelectSection && (
+                                <Pressable
+                                    onPress={() => onSelectSection(nextSection.sectionId)}
+                                    style={({hovered, pressed}: any) => [
+                                        styles.footerMobilePrimaryBtn,
+                                        hovered && {backgroundColor: Colors.accentPrimaryHover},
+                                        pressed && {opacity: 0.9},
+                                    ]}
+                                >
+                                    <Text style={styles.footerMobilePrimaryBtnText} numberOfLines={1}>
+                                        Próxima seção
+                                    </Text>
+                                    <ArrowRight size={16} color={Colors.textInverse}/>
+                                </Pressable>
+                            )}
+                        </View>
+                    </View>
+                )}
             </View>
         </View>
     );
@@ -1924,83 +1998,136 @@ const styles = StyleSheet.create({
     footerSlide: {
         width: "100%",
         backgroundColor: Colors.bgPrimary,
+        borderTopWidth: 1,
+        borderTopColor: Colors.borderSubtle,
         alignItems: "center",
-        justifyContent: "center",
-        padding: Spacing.xl,
+        paddingVertical: 44,
+        paddingHorizontal: Spacing.xl,
     },
-    footerCard: {
-        maxWidth: 520,
+    footerSlideMobile: {
+        paddingVertical: 28,
+        paddingHorizontal: Spacing.md,
+        paddingBottom: 68,
+    },
+    footerContainer: {
         width: "100%",
+        maxWidth: 880,
+    },
+    footerDesktopRow: {
+        flexDirection: "row",
+        alignItems: "stretch",
+        gap: Spacing.md,
+    },
+    footerDesktopIconBtn: {
+        width: 68,
+        borderRadius: Radii.md,
         backgroundColor: Colors.bgSurface,
         borderWidth: 1,
         borderColor: Colors.borderSubtle,
-        borderRadius: Radii.lg,
-        padding: Spacing.xl,
         alignItems: "center",
-    },
-    footerBadge: {
-        ...Typography.badge,
-        color: Colors.accentPrimary,
-        marginBottom: Spacing.xs,
-    },
-    footerTitle: {
-        ...Typography.h2,
-        color: Colors.textPrimary,
-        textAlign: "center",
-        marginBottom: Spacing.xs,
-    },
-    footerSubtitle: {
-        ...Typography.bodySmall,
-        color: Colors.textSecondary,
-        textAlign: "center",
-        marginBottom: Spacing.lg,
-    },
-    footerActionsRow: {
-        flexDirection: "row",
-        flexWrap: "wrap",
         justifyContent: "center",
-        gap: Spacing.md,
-        width: "100%",
-    },
-    footerPrimaryBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.xs + 2,
-        backgroundColor: Colors.accentPrimary,
-        paddingVertical: 12,
-        paddingHorizontal: Spacing.lg,
-        borderRadius: Radii.md,
         ...Platform.select({web: {cursor: "pointer" as any}}),
     },
-    footerPrimaryBtnText: {
-        ...Typography.bodySemiBold,
-        fontSize: 14,
-        color: Colors.textInverse,
+    footerDesktopIconBtnHover: {
+        borderColor: Colors.accentPrimary,
+        backgroundColor: Colors.bgElevated,
     },
-    footerSecondaryBtn: {
+    footerDesktopNextIconBtn: {
+        width: 68,
+        borderRadius: Radii.md,
+        backgroundColor: Colors.accentPrimary,
+        alignItems: "center",
+        justifyContent: "center",
+        ...Platform.select({web: {cursor: "pointer" as any}}),
+    },
+    footerDesktopNextIconBtnHover: {
+        backgroundColor: Colors.accentPrimaryHover,
+    },
+    footerMobileCol: {
+        flexDirection: "column",
+        gap: Spacing.sm,
+    },
+    footerMobileSecondaryRow: {
         flexDirection: "row",
         alignItems: "center",
-        gap: Spacing.xs,
-        backgroundColor: Colors.bgPrimary,
+        gap: Spacing.sm,
+    },
+    footerMobileActionBtn: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: Colors.bgSurface,
         borderWidth: 1,
-        borderColor: Colors.borderStrong,
+        borderColor: Colors.borderSubtle,
+        borderRadius: Radii.md,
         paddingVertical: 12,
         paddingHorizontal: Spacing.md,
-        borderRadius: Radii.md,
         ...Platform.select({web: {cursor: "pointer" as any}}),
     },
-    footerSecondaryBtnText: {
-        ...Typography.bodySmall,
+    footerMobileActionText: {
+        ...Typography.bodySemiBold,
+        fontSize: 13,
         color: Colors.textPrimary,
     },
-    footerHomeLink: {
-        marginTop: Spacing.lg,
-        paddingVertical: 4,
+    footerMobilePrimaryBtn: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: Colors.accentPrimary,
+        borderRadius: Radii.md,
+        paddingVertical: 12,
+        paddingHorizontal: Spacing.md,
         ...Platform.select({web: {cursor: "pointer" as any}}),
     },
-    footerHomeLinkText: {
-        ...Typography.bodySmall,
+    footerMobilePrimaryBtnText: {
+        ...Typography.bodySemiBold,
+        fontSize: 13,
+        color: Colors.textInverse,
+    },
+    footerNextFeatureCard: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: Spacing.md,
+        backgroundColor: Colors.bgSurface,
+        borderWidth: 1,
+        borderColor: Colors.borderStrong,
+        borderLeftWidth: 3,
+        borderLeftColor: Colors.accentPrimary,
+        borderRadius: Radii.md,
+        paddingVertical: Spacing.lg,
+        paddingHorizontal: Spacing.lg,
+    },
+    footerNextTextCol: {
+        flex: 1,
+        gap: 4,
+    },
+    footerNextKickerRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 6,
+    },
+    footerNextKicker: {
+        ...Typography.badge,
+        color: Colors.accentPrimary,
+    },
+    footerNextPeriod: {
+        ...Typography.coordinate,
+        fontSize: 12,
         color: Colors.textSecondary,
-        textDecorationLine: "underline",
+    },
+    footerNextTitle: {
+        ...Typography.h2,
+        color: Colors.textPrimary,
+    },
+    footerNextTitleMobile: {
+        fontSize: 19,
+        lineHeight: 25,
     },
 });

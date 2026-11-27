@@ -3,6 +3,7 @@ import {useLocalSearchParams, useRouter} from "expo-router";
 import {ScreenContainer} from "@/components/screen-container";
 import {ScrollytellingStage} from "@/components/scrollytelling-stage";
 import {SECOES, SectionData} from "@/data/museum-section";
+import {Platform} from "react-native";
 
 export default function EraScreen() {
     const router = useRouter();
@@ -12,6 +13,11 @@ export default function EraScreen() {
     const section = SECOES[currentId];
 
     const handleBackHome = () => {
+        if (Platform.OS === "web") {
+            router.push("/");
+            return;
+        }
+
         if (router.canGoBack()) {
             router.back();
         } else {
