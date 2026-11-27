@@ -23,8 +23,8 @@ export interface StoryStep {
     id: string;
     layout: StepLayout,
     sequenceId?: string;        // Agrupa passos consecutivos na mesma sequência visual (mesmo trocando de imagem)
-    year?: string;              // Ex: "1918" ou "1943 • Bletchley Park"
-    title?: string;             // Título do trecho
+    year?: string;
+    title?: string;
     text: string;
     image?: ImageSourcePropType | { uri: string };
     imageCaption?: string;
@@ -48,9 +48,8 @@ export const SECOES: Record<string, SectionData> = {
             {
                 id: '1',
                 layout: 'full-image',
-                imageFit: 'contain',
                 image: require('@/assets/images/cifra_cesar.svg'),
-                text: 'Por volta de 100 a.C, o imperador romano Júlio César era conhecido por usar uma [[cifra-substituicao|cifra de substituição]] para transmitir mensagens ao generais do seu exército na frente de guerra.',
+                text: 'Por volta de 100 a.C, o imperador romano Júlio César era conhecido por usar uma [[cifra-substituicao|cifra de substituição]] simples para transmitir mensagens ao generais do seu exército.',
                 isBrazil: false
             },
             {
@@ -58,7 +57,14 @@ export const SECOES: Record<string, SectionData> = {
                 layout: 'full-image',
                 image: require('@/assets/images/cifra_cesar.svg'),
                 camera: {scale: 1.3, focusX: -0.5, focusY: 0},
-                text: 'Na cifra usada por César, cada caractere era deslocado em três casas, portanto, "A" se tornava "D", "B" se tornava "E", e assim por diante',
+                text: 'Na cifra usada por César, cada letra avançava três casas no alfabeto: "A" se tornava "D", "B" se tornava "E", e assim por diante.',
+                isBrazil: false
+            },
+            {
+                id: '1.2',
+                layout: 'full-image',
+                image: require('@/assets/images/cifra_cesar.svg'),
+                text: 'A cifra de César possuía um ponto fraco: como as trocas eram sempre iguais ("A" sempre se tornava "D"), era só contar as letras mais repetidas do texto para descobrir o segredo. Isso era conhecido como [[analise-frequencia|análise de frequência]]',
                 isBrazil: false
             },
             {
@@ -69,7 +75,7 @@ export const SECOES: Record<string, SectionData> = {
                 title: 'Cifra de Vigenère',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
                 camera: {scale: 1.0, focusX: 0, focusY: 0},
-                text: 'A cifra de Vigenère é um método de criptografar o texto usando uma senha para deslocar cada letra da mensagem original para frente no alfabeto, de acordo com a letra correspondente da senha.',
+                text: 'Para contornar a [[analise-frequencia|análise de frequência]], surgiu a cifra de Vigenère. Ao invés de usar um único deslocamento, ela usava uma senha para variar a troca de cada letra. Por causa disso, ela ficou conhecida por três séculos como "le chiffre indéchiffrable" (a cifra indecifrável). ',
                 isBrazil: false
             },
             {
@@ -79,7 +85,7 @@ export const SECOES: Record<string, SectionData> = {
                 title: 'Como Cifrar: Passo 1',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
                 camera: {scale: 1.0, focusX: 0, focusY: 0},
-                text: 'Exemplo: queremos criptografar a frase "ir para sul" usando a palavra-chave "meia".',
+                text: 'Imagine que queremos criptografar a frase "ir para sul" usando a palavra-chave "meia". Primeiro, repetimos as letras da senha até ter a mesma quantidade de caracteres da mensagem. Nesse caso, a senha precisa ter 9 letras:\n\nMensagem: IR PARA SUL\nSenha:    MEIAMEIAM',
                 isBrazil: false,
             },
             {
@@ -89,74 +95,57 @@ export const SECOES: Record<string, SectionData> = {
                 title: 'Como Cifrar: Passo 2',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
                 camera: {scale: 1.15, focusX: -0.25, focusY: -0.25},
-                text: 'Primeiro, repetimos as letras da senha até ter a mesma quantidade de caracteres da mensagem. Nesse caso, a senha precisa ter 9 letras:\n\nMensagem: IR PARA SUL\nSenha:    MEIAMEIAM',
+                text: 'Na grade, cruzamos a coluna da letra com a linha da letra da senha:\n\n- 1ª letra: coluna "I" + linha "M" = "U"\n- 2ª letra: coluna "R" + linha "E" = "V"',
                 isBrazil: false,
             },
             {
                 id: '2.3',
                 layout: "split",
                 sequenceId: 'vigenere-tutorial',
-                title: 'Como Cifrar: Passo 3',
+                title: 'Como Cifrar',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
                 camera: {scale: 1.75, focusX: -0.18, focusY: -0.05},
-                text: 'Para a 1ª letra ("I") com a 1ª letra da senha ("M"), cruzamos a coluna "I" com a linha "M" na grade (ou somamos suas posições considerando A = 0: 8 + 12 = 20). O encontro das duas resulta na letra "U".',
+                text: 'Também é possível usarmos as posições das letras no alfabeto para chegar nesse resultado.\n\nConsiderando A = 0, a posição da letra "I" é 8 e a posição da letra "M" é 12. Somando essas posições, obtemos 20. A letra na vigésima posição é "U".',
                 isBrazil: false,
             },
             {
                 id: '2.4',
                 layout: "split",
                 sequenceId: 'vigenere-tutorial',
-                title: 'Como Cifrar: Passo 4',
+                title: 'Como Cifrar: Resultado',
                 image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
-                camera: {scale: 1.75, focusX: 0.16, focusY: -0.32},
-                text: 'Na 2ª letra ("R") com a senha ("E"), cruzamos a coluna "R" com a linha "E" (17 + 4 = 21), obtendo a letra "V" — e repetimos o cruzamento para cada par seguinte.',
+                camera: {scale: 1.0, focusX: 0, focusY: 0},
+                text: 'Ao final, "ir para sul" se transforma em "uv xade aux". Repare no segredo: as duas letras "A" da palavra "para" viraram letras diferentes ("A" e "E"), embaralhando os padrões, diferente da cifra de César.',
                 isBrazil: false,
             },
             {
                 id: '2.5',
-                layout: "split",
-                sequenceId: 'vigenere-tutorial',
-                title: 'Como Cifrar: Resultado',
-                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
-                camera: {scale: 1.0, focusX: 0, focusY: 0},
-                text: 'Ao final de todas as letras, a mensagem original "ir para sul" se transforma no texto cifrado "uv xade aux".',
-                isBrazil: false,
-            },
-            {
-                id: '2.6',
-                layout: "split",
-                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Vigen%C3%A8re_square_shading.svg'},
-                camera: {scale: 1.0, focusX: 0.1, focusY: 0.1},
-                text: 'Por mais de três séculos, essa cifra era conhecida como "le chiffre indéchiffrable" (a cifra indecifrável), pois enganava a [[analise-frequencia|análise da frequência]]. Uma mesma letra pode virar letras diferentes no texto final, o que embaralha os padrões e faz o resultado parecer aleatório.',
-                isBrazil: false,
-            },
-            {
-                id: '2.7',
                 layout: 'split',
                 imagePosition: 'left',
                 image: {uri: 'https://s2.glbimg.com/xLbZ_qMpUDRA35L6cxYbcnjqMOc=/e.glbimg.com/og/ed/f/original/2018/10/18/charles_babbage_1860.jpg'},
                 imageCaption: 'Charles Babbage',
                 imageFit: "contain",
-                text: 'Apesar disso, ela foi quebrada no século XIX por Charles Babbage e por Friedrich Kasiski, ao perceberem que, quando uma mesma palavra era cifrada pelo mesmo trecho da senha, letras repetidas eram geradas no texto final. Ao medir a distância entre essas repetições, dá pra descobrir o tamanho da senha, separar as letras que usaram o mesmo deslocamento e aplicar a análise de frequência.',
+                text: 'Apesar disso, ela foi quebrada no século XIX por Charles Babbage e por [[friedrich-kasiski|Friedrich Kasiski]], ao notarem uma brecha: como a senha se repete, palavras iguais que caem sobre o mesmo trecho da senha geram sequências idênticas no texto cifrado. Medindo a distância entre essas repetições, dá pra descobrir o tamanho da senha, separar as letras que usaram o mesmo deslocamento e aplicar a análise de frequência.',
                 isBrazil: false,
             },
             {
                 id: '3',
                 layout: 'text-only',
                 imagePosition: 'left',
-                title: 'Máquina Enigma',
+                title: 'A Guerra pelo Rádio',
                 text: 'Na Primeira e na Segunda Guerra Mundial, as mensagens eram transmitidas via rádio e podiam ser interceptadas por qualquer um. Como o canal de comunicação era aberto, a segurança passou a depender totalmente da chave usada para criptografar o texto.',
                 isBrazil: false,
             },
             {
                 id: '3.1',
                 layout: 'full-image',
-                imagePosition: 'right',
+                year: '1918',
                 // image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Enigma-Machine.jpg?utm_source=pt.wikipedia.org&utm_campaign=index&utm_content=original'},
                 image: {uri: 'https://www.christies.com/-/jssmedia/images/features/articles/2024/12/guide-updates/collecting-guide-enigma-machines/enigma-machine-main.jpg?mw=2301&mh=1438&hash=74ef0fa22b03037c1dd064220fe5a81ed3355d57'},
                 imageFit: 'contain',
+                imageCaption: 'Máquina Enigma',
                 camera: {scale: 1.0, focusX: 0, focusY: -0.2},
-                text: 'No final da Primeira Guerra, o engenheiro alemão Arthur Scherbius inventou a Máquina Enigma, cujo uso se consolidou na Segunda Guerra. A Enigma era uma [[maquina-rotores|máquina de rotores]], semelhante a uma máquina de escrever, em que os rotores giravam em ritmos diferentes a cada tecla pressionada, trocando as letras e gerando o texto cifrado. Nesse sistema, a chave era a combinação diária da ordem, da posição inicial dos rotores e das conexões de cabos da máquina.',
+                text: 'No final da Primeira Guerra, o engenheiro alemão [[arthur-scherbius|Arthur Scherbius]] criou a Máquina Enigma, que mecanizou a criptografia. Parecida com uma máquina de escrever, a Enigma era uma [[maquina-rotores|máquina de rotores]], em que os discos internos giravam em ritmos diferentes cada vez que uma tecla era pressionada, trocando todo o circuito elétrico para devolver a letra cifrada.',
                 isBrazil: false,
             },
             {
@@ -164,15 +153,69 @@ export const SECOES: Record<string, SectionData> = {
                 layout: "full-image",
                 image: {uri: 'https://www.christies.com/-/jssmedia/images/features/articles/2024/12/guide-updates/collecting-guide-enigma-machines/enigma-machine-main.jpg?mw=2301&mh=1438&hash=74ef0fa22b03037c1dd064220fe5a81ed3355d57'},
                 camera: {scale: 1.6, focusX: 0.1, focusY: -0.1},
-                text: 'No início, acreditava-se que era impossível descriptografar uma mensagem criada pela Enigma.',
+                text: 'No início, acreditava-se que era impossível descriptografar uma mensagem criada pela Enigma, já que a chave mudava todos os dias: dependia da escolha e da posição inicial dos rotores e das conexões de cabos da máquina, o que gerava quatrilhões de combinações possíveis.',
                 isBrazil: false,
             },
             {
                 id: '3.3',
-                layout: 'text-only',
-                text: 'Porém, entre 1932 e 1933, os poloneses conseguiram descobrir o funcionamento interno da máquina e construir réplicas para quebrar as mensagens. Posteriormente, durante a Segunda Guerra Mundial, quando os alemães tornaram o sistema mais complexo, [[alan-turing|Alan Turing]] aprimorou esse trabalho e desenvolveu uma máquina capaz de testar milhares de combinações, permitindo decifrar as mensagens alemãs em grande escala e rapidamente, favorecendo os [[aliados|Aliados]].',
+                layout: 'split',
+                image: {uri: 'https://features.diplomatmagazine.com/i-am-the-one-who-broke-the-enigma/assets/PfZMDmc1Cc/18-2560x3305.jpg'},
+                imagePosition: 'right',
+                imageFit: 'contain',
+                imageCaption: 'Marian Rejewski',
+                year: '1932',
+                text: 'Entretanto, no final de 1932, o matemático polonês Marian Rejewski, junto com Jerzy Różycki e Henryk Zygalski, conseguiu decifrar o funcionamento das primeiras versões da Enigma. Usando a [[teoria-grupos|teoria dos grupos]], eles criaram a [[bomba-criptologica|Bomba criptológica]], que explorava uma erro humano no procedimento alemão: os operadores repetiam a chave da mensagem duas vezes no início de cada mensagem. Todo esse conhecimento foi depois compartilhado com os franceses e os britânicos.',
                 isBrazil: false,
-            }
+            },
+            {
+                id: '3.4',
+                layout: 'split',
+                image: {uri: 'https://upload.wikimedia.org/wikipedia/commons/f/f8/Alan_Turing_%281951%29.jpg?utm_source=pt.wikipedia.org&utm_campaign=imageinfo&utm_content=original'},
+                imagePosition: "left",
+                imageCaption: 'Alan Turing',
+                year: '1940',
+                text: 'Com a base obtida por Rejewski, [[alan-turing|Alan Turing]] e sua equipe britânica projetaram a [[bombe|Bombe]], uma versão melhorada da [[bomba-criptologica|Bomba criptológica]]. Ela testava milhares de combinação de rotores por minuto e funcionava por eliminação lógica, descartando qualquer combinação impossível. Isso permitiu decifrar as mensagens em grande escala e rapidamente, favorecendo os [[aliados|Aliados]].',
+                isBrazil: false,
+            },
+            {
+                id: '4',
+                layout: 'full-image',
+                imagePosition: "right",
+                image: require('@/assets/images/mapa-bolivar.jpg'),
+                camera: {scale: 1.0, focusX: 0, focusY: 1},
+                year: '1942 - 1944',
+                title: 'Operação Bolívar',
+                text: 'No território brasileiro, a inteligência alemã espalhou redes de espionagem clandestina pela América do Sul, na chamada Operação Bolívar. Do Brasil, o agente [[albert-engels|Albert Engels]] transmitia a Berlim mensagens cifradas revelando horários de navios, cargas para os [[aliados|Aliados]] e movimentações de tropas no Nordeste.',
+                isBrazil: true,
+            },
+            {
+                id: '4.1',
+                layout: 'full-image',
+                image: require('@/assets/images/mapa-bolivar.jpg'),
+                camera: {scale: 1.5, focusX: 0.5, focusY: -0.5},
+                year: '1944',
+                text: 'Com apoio de [[radiogoniometria|radiogoniometria]] e serviços aliados, a polícia brasileira rastreou as ondas de rádio clandestinas e desfez os núcleos de espionagem. Na operação, transmissores, manuais de cifragens e tabelas de códigos numéricos foram apreendidos.',
+                isBrazil: true,
+            },
+            {
+                id: '5',
+                layout: 'split',
+                image: {uri: 'https://www.bletchleypark.org.uk/wp-content/uploads/2022/02/945x805_2_CU13-945x700.jpg'},
+                imagePosition: "left",
+                imageCaption: "Colossus No 7",
+                year: '1945',
+                title: 'Colossus',
+                text: 'Enquanto a Enigma era usada nas linhas de frente da guerra, o alto comando usava a [[maquina-lorenz|máquina Lorenz]]. Ela era um sistema de 12 rotores em [[codigo-binario|código binário]] e muito mais complexa que a Enigma. Para vencê-la, o matemático [[max-newman|Max Newman]] e o engenheiro [[tommy-flowers|Tommy Flowers]] construíram o Colossus: usando [[valvulas-eletronicas|válvulas eletrônicas]] em vez de [[reles-mecanicos|relés mecânicos]], nascia o primeiro computador eletrônico digital programável da história.',
+                isBrazil: false,
+            },
+            {
+                id: '6',
+                layout: 'text-only',
+                year: '1949',
+                title: 'A Criptografia Torna-se Ciência',
+                text: 'Após a guerra, em 1949, [[claude-shannon|Claude Shannon]], inspirado pelas máquinas criadas para quebrar os códigos e por encontros com [[alan-turing|Alan Turing]], publicou o artigo "Communication Theory of Secrecy Systems", que fundou a criptografia moderna, e a transformou em um ramo da matemática.',
+                isBrazil: false,
+            },
         ]
     },
     '2': {
